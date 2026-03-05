@@ -1,12 +1,43 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import HeroSection from "@/components/HeroSection";
+import QuestionInput from "@/components/QuestionInput";
+import ProgressIndicator from "@/components/ProgressIndicator";
+import ScenePlayer from "@/components/ScenePlayer";
+import HistorySection from "@/components/HistorySection";
+import { useExplanationGenerator } from "@/hooks/useExplanationGenerator";
 
 const Index = () => {
+  const {
+    status,
+    explanation,
+    imageProgress,
+    history,
+    generate,
+    loadFromHistory,
+    clearHistory,
+    setPlaying,
+  } = useExplanationGenerator();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <HeroSection />
+      <QuestionInput onSubmit={generate} status={status} />
+      <ProgressIndicator
+        status={status}
+        currentStep={imageProgress.current}
+        totalSteps={imageProgress.total}
+      />
+      {explanation && (status === "ready" || status === "playing") && (
+        <ScenePlayer
+          scenes={explanation.scenes}
+          title={explanation.title}
+          onComplete={() => {}}
+        />
+      )}
+      <HistorySection
+        items={history}
+        onSelect={loadFromHistory}
+        onClear={clearHistory}
+      />
     </div>
   );
 };
