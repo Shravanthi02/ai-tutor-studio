@@ -24,17 +24,15 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an educational content creator. Given a question, create a clear explanation broken into scenes for an animated video. Return a JSON object with this exact structure:
-{
-  "title": "Short title for the topic",
-  "scenes": [
-    {
-      "text": "1-2 sentence explanation for this scene",
-      "imagePrompt": "Detailed prompt for generating an educational illustration for this concept. Be specific about colors, style (flat illustration, diagram, etc), and subject matter. Always specify: clean, modern educational illustration style, vibrant colors, no text in image."
-    }
-  ]
-}
-Create 4-6 scenes. Each scene should explain one concept building on the previous. Keep language clear and accessible. The imagePrompt should describe a visual that helps explain the concept.`
+            content: `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, PLUS a comprehensive text answer.
+
+Rules:
+- Create 6-8 scenes for a detailed animated explanation
+- Each scene text should be 2-3 sentences, rich with detail
+- Build concepts progressively from simple to complex
+- Use analogies and real-world examples
+- The fullAnswer should be a comprehensive 3-5 paragraph written explanation covering the topic in depth, suitable for reading after watching the video
+- imagePrompt must describe vivid, detailed educational illustrations`
           },
           { role: "user", content: question }
         ],
@@ -43,24 +41,25 @@ Create 4-6 scenes. Each scene should explain one concept building on the previou
             type: "function",
             function: {
               name: "create_explanation",
-              description: "Create a structured educational explanation with scenes",
+              description: "Create a structured educational explanation with scenes and full text answer",
               parameters: {
                 type: "object",
                 properties: {
-                  title: { type: "string" },
+                  title: { type: "string", description: "Engaging title for the topic" },
+                  fullAnswer: { type: "string", description: "Comprehensive 3-5 paragraph text explanation of the topic" },
                   scenes: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        text: { type: "string" },
-                        imagePrompt: { type: "string" }
+                        text: { type: "string", description: "2-3 sentence scene narration" },
+                        imagePrompt: { type: "string", description: "Detailed illustration prompt. Always include: clean modern educational illustration, vibrant colors, no text in image, specific visual elements" }
                       },
                       required: ["text", "imagePrompt"]
                     }
                   }
                 },
-                required: ["title", "scenes"]
+                required: ["title", "fullAnswer", "scenes"]
               }
             }
           }

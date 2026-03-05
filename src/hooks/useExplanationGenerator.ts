@@ -17,6 +17,42 @@ function saveHistory(items: HistoryItem[]) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 20)));
 }
 
+// Generate images in parallel batches of 3 for speed
+async function generateImagesParallel(
+  scenes: Scene[],
+  onProgress: (current: number) => void
+): Promise<Scene[]> {
+  const BATCH_SIZE = 3;
+  const results: Scene[] = [...scenes];
+
+  for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
+    const batch = scenes.slice(i, i + BATCH_SIZE);
+    const promises = batch.map(async (scene, batchIdx) => {
+      const idx = i + batchIdx;
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-scene-image", {
+          body: { prompt: scene.imagePrompt },
+        });
+        if (!error && data?.imageUrl) {
+          results[idx] = { ...scene, imageUrl: data.imageUrl };
+        }
+      } catch {
+        // keep scene without image
+      }
+      onProgress(idx + 1);
+    });
+
+    await Promise.all(promises);
+
+    // Small delay between batches to avoid rate limits
+    if (i + BATCH_SIZE < scenes.length) {
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+
+  return results;
+}
+
 export function useExplanationGenerator() {
   const [status, setStatus] = useState<GenerationStatus>("idle");
   const [explanation, setExplanation] = useState<Explanation | null>(null);
@@ -28,7 +64,6 @@ export function useExplanationGenerator() {
     setExplanation(null);
 
     try {
-      // Step 1: Generate explanation
       const { data: explData, error: explError } = await supabase.functions.invoke("generate-explanation", {
         body: { question },
       });
@@ -41,49 +76,27 @@ export function useExplanationGenerator() {
       setStatus("generating-images");
       setImageProgress({ current: 0, total: expl.scenes.length });
 
-      // Step 2: Generate images for each scene (sequentially to avoid rate limits)
-      const scenesWithImages: Scene[] = [];
-      for (let i = 0; i < expl.scenes.length; i++) {
-        setImageProgress({ current: i, total: expl.scenes.length });
-
-        try {
-          const { data: imgData, error: imgError } = await supabase.functions.invoke("generate-scene-image", {
-            body: { prompt: expl.scenes[i].imagePrompt },
-          });
-
-          if (imgError || imgData?.error) {
-            console.warn(`Image ${i} failed, using placeholder`);
-            scenesWithImages.push({ ...expl.scenes[i] });
-          } else {
-            scenesWithImages.push({ ...expl.scenes[i], imageUrl: imgData.imageUrl });
-          }
-        } catch {
-          scenesWithImages.push({ ...expl.scenes[i] });
-        }
-
-        // Small delay between image requests
-        if (i < expl.scenes.length - 1) {
-          await new Promise((r) => setTimeout(r, 1000));
-        }
-      }
+      // Generate images in parallel batches
+      const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
+        setImageProgress({ current, total: expl.scenes.length });
+      });
 
       const finalExplanation = { ...expl, scenes: scenesWithImages };
       setExplanation(finalExplanation);
       setImageProgress({ current: expl.scenes.length, total: expl.scenes.length });
       setStatus("ready");
 
-      // Save to history
       const item: HistoryItem = {
         id: crypto.randomUUID(),
         question,
         title: expl.title,
+        fullAnswer: expl.fullAnswer || "",
         timestamp: Date.now(),
         scenes: scenesWithImages,
       };
       const newHistory = [item, ...history.filter((h) => h.question !== question)];
       setHistory(newHistory);
       saveHistory(newHistory);
-
     } catch (e: any) {
       console.error("Generation error:", e);
       toast.error(e.message || "Failed to generate explanation");
@@ -92,7 +105,7 @@ export function useExplanationGenerator() {
   }, [history]);
 
   const loadFromHistory = useCallback((item: HistoryItem) => {
-    setExplanation({ title: item.title, scenes: item.scenes });
+    setExplanation({ title: item.title, fullAnswer: item.fullAnswer, scenes: item.scenes });
     setStatus("ready");
   }, []);
 
