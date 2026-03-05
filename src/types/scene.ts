@@ -6,6 +6,7 @@ export interface Scene {
 
 export interface Explanation {
   title: string;
+  fullAnswer: string;
   scenes: Scene[];
 }
 
@@ -13,6 +14,7 @@ export interface HistoryItem {
   id: string;
   question: string;
   title: string;
+  fullAnswer: string;
   timestamp: number;
   scenes: Scene[];
 }

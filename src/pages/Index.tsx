@@ -2,6 +2,7 @@ import HeroSection from "@/components/HeroSection";
 import QuestionInput from "@/components/QuestionInput";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScenePlayer from "@/components/ScenePlayer";
+import TextAnswer from "@/components/TextAnswer";
 import HistorySection from "@/components/HistorySection";
 import { useExplanationGenerator } from "@/hooks/useExplanationGenerator";
 
@@ -14,7 +15,6 @@ const Index = () => {
     generate,
     loadFromHistory,
     clearHistory,
-    setPlaying,
   } = useExplanationGenerator();
 
   return (
@@ -27,11 +27,16 @@ const Index = () => {
         totalSteps={imageProgress.total}
       />
       {explanation && (status === "ready" || status === "playing") && (
-        <ScenePlayer
-          scenes={explanation.scenes}
-          title={explanation.title}
-          onComplete={() => {}}
-        />
+        <>
+          <ScenePlayer
+            scenes={explanation.scenes}
+            title={explanation.title}
+          />
+          <TextAnswer
+            title={explanation.title}
+            fullAnswer={explanation.fullAnswer || ""}
+          />
+        </>
       )}
       <HistorySection
         items={history}
