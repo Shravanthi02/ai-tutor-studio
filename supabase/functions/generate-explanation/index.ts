@@ -10,87 +10,69 @@ serve(async (req) => {
 
   try {
     const { question } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GOOGLE_GEMINI_API_KEY) throw new Error("GOOGLE_GEMINI_API_KEY not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          {
-            role: "system",
-            content: `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer in the "fullAnswer" field.
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
 
-You MUST provide ALL of these fields: title, fullAnswer, scenes.
+You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
+{
+  "title": "Engaging title",
+  "fullAnswer": "Comprehensive 3-5 paragraph explanation (at least 200 words)",
+  "scenes": [
+    {"text": "2-3 sentence scene narration", "imagePrompt": "Detailed illustration description with: clean modern educational illustration, vibrant colors, no text in image"}
+  ]
+}
 
 Rules:
-- Create 6-8 scenes for a detailed animated explanation
+- Create 6-8 scenes
 - Each scene text should be 2-3 sentences, rich with detail
 - Build concepts progressively from simple to complex
 - Use analogies and real-world examples
-- IMPORTANT: "fullAnswer" is REQUIRED. Write a comprehensive 3-5 paragraph written explanation covering the topic in depth, suitable for reading after watching the video. This must be a substantial text of at least 200 words.
-- imagePrompt must describe vivid, detailed educational illustrations`
-          },
-          { role: "user", content: question }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "create_explanation",
-              description: "Create a structured educational explanation with scenes and full text answer",
-              parameters: {
-                type: "object",
-                properties: {
-                  title: { type: "string", description: "Engaging title for the topic" },
-                  fullAnswer: { type: "string", description: "Comprehensive 3-5 paragraph text explanation of the topic" },
-                  scenes: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        text: { type: "string", description: "2-3 sentence scene narration" },
-                        imagePrompt: { type: "string", description: "Detailed illustration prompt. Always include: clean modern educational illustration, vibrant colors, no text in image, specific visual elements" }
-                      },
-                      required: ["text", "imagePrompt"]
-                    }
-                  }
-                },
-                required: ["title", "fullAnswer", "scenes"]
-              }
+- fullAnswer must be at least 200 words
+- imagePrompt must describe vivid, detailed educational illustrations
+
+Question: ${question}`
+                }
+              ]
             }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "create_explanation" } }
-      }),
-    });
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+          },
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("AI error:", response.status, errText);
+      console.error("Gemini error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limited. Please try again shortly." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits exhausted. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("AI gateway error");
+      throw new Error("Gemini API error");
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("No tool call response");
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) throw new Error("No response from Gemini");
 
-    const explanation = JSON.parse(toolCall.function.arguments);
+    const explanation = JSON.parse(textContent);
 
     return new Response(JSON.stringify(explanation), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
