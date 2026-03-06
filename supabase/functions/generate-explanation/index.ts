@@ -24,14 +24,16 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, PLUS a comprehensive text answer.
+            content: `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer in the "fullAnswer" field.
+
+You MUST provide ALL of these fields: title, fullAnswer, scenes.
 
 Rules:
 - Create 6-8 scenes for a detailed animated explanation
 - Each scene text should be 2-3 sentences, rich with detail
 - Build concepts progressively from simple to complex
 - Use analogies and real-world examples
-- The fullAnswer should be a comprehensive 3-5 paragraph written explanation covering the topic in depth, suitable for reading after watching the video
+- IMPORTANT: "fullAnswer" is REQUIRED. Write a comprehensive 3-5 paragraph written explanation covering the topic in depth, suitable for reading after watching the video. This must be a substantial text of at least 200 words.
 - imagePrompt must describe vivid, detailed educational illustrations`
           },
           { role: "user", content: question }
