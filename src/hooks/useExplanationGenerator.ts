@@ -14,7 +14,21 @@ function loadHistory(): HistoryItem[] {
 }
 
 function saveHistory(items: HistoryItem[]) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 20)));
+  // Strip imageUrl (base64) to avoid localStorage quota issues
+  const lite = items.slice(0, 20).map((item) => ({
+    ...item,
+    scenes: item.scenes.map(({ text, imagePrompt }) => ({ text, imagePrompt })),
+  }));
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(lite));
+  } catch {
+    // If still too large, keep only 5 items
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(lite.slice(0, 5)));
+    } catch {
+      localStorage.removeItem(HISTORY_KEY);
+    }
+  }
 }
 
 // Generate images in parallel batches of 3 for speed
