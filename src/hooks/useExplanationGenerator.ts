@@ -82,7 +82,11 @@ export function useExplanationGenerator() {
         body: { question },
       });
 
-      if (explError) throw new Error(explError.message || "Failed to generate explanation");
+      if (explError) {
+        // Try to extract the actual error message from the response data
+        const errorMsg = explData?.error || explError.message || "Failed to generate explanation";
+        throw new Error(errorMsg);
+      }
       if (explData?.error) throw new Error(explData.error);
 
       const expl = explData as Explanation;
