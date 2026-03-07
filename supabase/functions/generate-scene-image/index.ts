@@ -10,85 +10,30 @@ serve(async (req) => {
 
   try {
     const { prompt } = await req.json();
+    
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
+    let imageUrl: string | null = null;
+
+    if (LOVABLE_API_KEY) {
+      try {
+        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
+      } catch (e) {
+        console.warn("Lovable AI image failed, trying Gemini:", e);
+        if (GOOGLE_GEMINI_API_KEY) {
+          imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt);
+        }
+      }
+    } else if (GOOGLE_GEMINI_API_KEY) {
+      imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt);
+    }
+
+    if (!imageUrl) throw new Error("No image generated");
+
+    return new Response(JSON.stringify({ imageUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Image gen error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited" }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("Image generation failed");
-    }
-
-    const data = await response.json();
-    
-    // The gateway returns image data in the response
-    const message = data.choices?.[0]?.message;
-    
-    // Check for inline image data in parts (multimodal response)
-    if (message?.content) {
-      // If content is an array (multimodal), find image part
-      if (Array.isArray(message.content)) {
-        const imagePart = message.content.find((p: any) => p.type === "image_url" || p.inline_data);
-        if (imagePart?.image_url?.url) {
-          return new Response(JSON.stringify({ imageUrl: imagePart.image_url.url }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        if (imagePart?.inline_data) {
-          const imageUrl = `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`;
-          return new Response(JSON.stringify({ imageUrl }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-      
-      // If content is a string, it might contain a data URL or base64
-      if (typeof message.content === "string" && message.content.startsWith("data:")) {
-        return new Response(JSON.stringify({ imageUrl: message.content }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    // Check for image in the raw response structure (Gemini native format passed through)
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const inlineImagePart = parts.find((p: any) => p.inlineData);
-    if (inlineImagePart?.inlineData) {
-      const imageUrl = `data:${inlineImagePart.inlineData.mimeType};base64,${inlineImagePart.inlineData.data}`;
-      return new Response(JSON.stringify({ imageUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.error("Unexpected response structure:", JSON.stringify(data).slice(0, 500));
-    throw new Error("No image generated");
   } catch (e) {
     console.error("Error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
@@ -96,3 +41,71 @@ serve(async (req) => {
     });
   }
 });
+
+async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash-image",
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Lovable AI image error:", response.status, errText);
+    throw new Error(`Lovable AI error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const message = data.choices?.[0]?.message;
+
+  if (Array.isArray(message?.content)) {
+    const imagePart = message.content.find((p: any) => p.type === "image_url" || p.inline_data);
+    if (imagePart?.image_url?.url) return imagePart.image_url.url;
+    if (imagePart?.inline_data) return `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`;
+  }
+
+  if (typeof message?.content === "string" && message.content.startsWith("data:")) {
+    return message.content;
+  }
+
+  // Gemini native format passed through
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const inlinePart = parts.find((p: any) => p.inlineData);
+  if (inlinePart?.inlineData) {
+    return `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
+  }
+
+  throw new Error("No image in response");
+}
+
+async function generateWithGemini(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Gemini image error:", response.status, errText);
+    throw new Error(response.status === 429 ? "Rate limited" : "Image generation failed");
+  }
+
+  const data = await response.json();
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find((p: any) => p.inlineData);
+  if (!imagePart?.inlineData) throw new Error("No image generated");
+  return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+}
