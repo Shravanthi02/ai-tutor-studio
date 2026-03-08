@@ -110,19 +110,6 @@ export function useExplanationGenerator() {
 
       const expl = explData as Explanation;
       setExplanation(expl);
-      setStatus("generating-images");
-
-      // Generate one image per scene (using sceneText as primary prompt)
-      const totalImages = expl.scenes.length;
-      setImageProgress({ current: 0, total: totalImages });
-
-      const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
-        setImageProgress({ current, total: totalImages });
-      });
-
-      const finalExplanation = { ...expl, scenes: scenesWithImages };
-      setExplanation(finalExplanation);
-      setImageProgress({ current: totalImages, total: totalImages });
       setStatus("ready");
 
       const item: HistoryItem = {
