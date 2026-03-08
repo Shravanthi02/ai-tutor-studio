@@ -288,11 +288,10 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Video viewport */}
       <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
-        {/* Crossfade image layer */}
+        {/* Multi-image layer */}
         <div className="absolute inset-0 overflow-hidden">
-          <CrossfadeImage
-            src={scene.imageUrl}
-            alt={scene.text}
+          <SceneImages
+            scene={scene}
             animKey={animKey}
             sceneIndex={currentIndex}
           />
