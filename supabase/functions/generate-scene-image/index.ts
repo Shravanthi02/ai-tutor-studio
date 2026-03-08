@@ -28,7 +28,7 @@ serve(async (req) => {
     // Try Gemini
     if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
       try {
-        imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt);
+        imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt, sceneText);
       } catch (e) {
         console.warn("Gemini image failed:", e);
       }
