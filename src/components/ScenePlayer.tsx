@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2 } from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Scene } from "@/types/scene";
+
+const LANGUAGES = [
+  { code: "en-US", label: "English" },
+  { code: "hi-IN", label: "हिन्दी" },
+  { code: "ta-IN", label: "தமிழ்" },
+  { code: "te-IN", label: "తెలుగు" },
+] as const;
 
 interface ScenePlayerProps {
   scenes: Scene[];
@@ -14,8 +21,8 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const ELEVENLABS_ENABLED = false;
 const KEN_BURNS_CLASSES = ["ken-burns-1", "ken-burns-2", "ken-burns-3", "ken-burns-4"];
 
-// --- Browser TTS with chunking ---
-function speakReliably(text: string, onEnd: () => void): () => void {
+// --- Browser TTS with chunking and language support ---
+function speakReliably(text: string, lang: string, onEnd: () => void): () => void {
   let cancelled = false;
   const synth = window.speechSynthesis;
   synth.cancel();
@@ -27,11 +34,22 @@ function speakReliably(text: string, onEnd: () => void): () => void {
     if (synth.speaking) { synth.pause(); synth.resume(); }
   }, 5000);
 
+  // Find best matching voice for language
+  const findVoice = () => {
+    const voices = synth.getVoices();
+    return voices.find((v) => v.lang === lang) ||
+      voices.find((v) => v.lang.startsWith(lang.split("-")[0])) ||
+      null;
+  };
+
   function speakNext() {
     if (cancelled) { clearInterval(keepAlive); return; }
     if (currentIdx >= sentences.length) { clearInterval(keepAlive); onEnd(); return; }
 
     const u = new SpeechSynthesisUtterance(sentences[currentIdx].trim());
+    u.lang = lang;
+    const voice = findVoice();
+    if (voice) u.voice = voice;
     u.rate = 0.9;
     u.pitch = 1;
     u.onend = () => { currentIdx++; setTimeout(speakNext, 150); };
@@ -39,7 +57,13 @@ function speakReliably(text: string, onEnd: () => void): () => void {
     synth.speak(u);
   }
 
-  speakNext();
+  // Voices may load async
+  if (synth.getVoices().length === 0) {
+    synth.onvoiceschanged = () => speakNext();
+  } else {
+    speakNext();
+  }
+
   return () => { cancelled = true; clearInterval(keepAlive); synth.cancel(); };
 }
 
@@ -114,6 +138,8 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
   const [animKey, setAnimKey] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [textAnimActive, setTextAnimActive] = useState(true);
+  const [selectedLang, setSelectedLang] = useState<string>(LANGUAGES[0].code);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cancelSpeechRef = useRef<(() => void) | null>(null);
   const audioCache = useRef<Map<number, string | null>>(new Map());
@@ -173,14 +199,14 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       audio.onended = advanceToNext;
-      audio.onerror = () => { cancelSpeechRef.current = speakReliably(text, advanceToNext); };
+      audio.onerror = () => { cancelSpeechRef.current = speakReliably(text, selectedLang, advanceToNext); };
       try { await audio.play(); preloadAudio(sceneIndex + 1); return; } catch {}
     }
 
     if (mountedRef.current) {
-      cancelSpeechRef.current = speakReliably(text, advanceToNext);
+      cancelSpeechRef.current = speakReliably(text, selectedLang, advanceToNext);
     }
-  }, [scenes.length, goToScene, onComplete, preloadAudio]);
+  }, [scenes.length, goToScene, onComplete, preloadAudio, selectedLang]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -261,6 +287,36 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-3 mt-4">
+        {/* Language selector */}
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowLangMenu(!showLangMenu)}
+            className="text-muted-foreground hover:text-foreground"
+            title="Change language"
+          >
+            <Globe className="w-4 h-4" />
+          </Button>
+          {showLangMenu && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[120px] z-50">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => { setSelectedLang(lang.code); setShowLangMenu(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-sm font-body transition-colors ${
+                    selectedLang === lang.code
+                      ? "text-primary bg-primary/10"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Button variant="ghost" size="icon" onClick={restart} className="text-muted-foreground hover:text-foreground">
           <RotateCcw className="w-4 h-4" />
         </Button>
