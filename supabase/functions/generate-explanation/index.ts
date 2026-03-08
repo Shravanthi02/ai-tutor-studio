@@ -73,8 +73,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator." },
-        { role: "user", content: `Create an educational explanation for: ${question}` },
+        { role: "system", content: "You are an expert educational content creator and visual storyteller. Create vivid, engaging explanations that use creative metaphors, analogies, and visual imagery to make complex topics easy to understand." },
+        { role: "user", content: `Create an educational explanation for: ${question}. Make the image prompts extremely creative and visually striking - use metaphors, dramatic compositions, creative color palettes, and artistic styles like isometric 3D, watercolor, infographic, or cinematic photography to make each scene memorable and aid understanding.` },
       ],
       tools: [{
         type: "function",
