@@ -65,14 +65,13 @@ serve(async (req) => {
 const SCENE_SCHEMA = {
   type: "object",
   properties: {
-    text: { type: "string", description: "2-3 sentence scene narration" },
-    imagePrompts: {
-      type: "array",
-      items: { type: "string" },
-      description: "Array of 2-3 DIFFERENT image prompts for this scene. CRITICAL: Each prompt MUST directly depict the EXACT subject matter described in the scene text — not a generic or loosely related image. The image should visually represent what is being explained in the scene text. For example, if the scene text says 'Chloroplasts contain chlorophyll which absorbs sunlight', the prompts should show: ['Cross-section diagram of a chloroplast showing thylakoid membranes and stroma, with green chlorophyll pigments highlighted', 'Sunlight rays hitting a green leaf surface being absorbed by chlorophyll molecules, close-up microscopic view', 'Comparison diagram showing chlorophyll absorbing red and blue light wavelengths while reflecting green light']. Each prompt must be a vivid, specific description of the exact concept in the scene text. NO TEXT or labels in the images. Use realistic educational illustration style."
+    text: { type: "string", description: "2-3 sentence scene narration explaining one concept" },
+    imagePrompt: {
+      type: "string",
+      description: "A SINGLE, highly specific image prompt that EXACTLY depicts the concept described in the scene text. Must be a literal visual representation — like a textbook illustration of that exact concept. Example: if text says 'Chloroplasts absorb sunlight', prompt should be 'Cross-section of a chloroplast organelle showing green thylakoid membranes absorbing golden sunlight rays, detailed scientific illustration'. NO text/labels in image. Realistic educational style."
     },
   },
-  required: ["text", "imagePrompts"],
+  required: ["text", "imagePrompt"],
   additionalProperties: false,
 };
 
