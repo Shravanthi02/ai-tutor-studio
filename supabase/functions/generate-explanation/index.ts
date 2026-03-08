@@ -11,24 +11,43 @@ serve(async (req) => {
   try {
     const { question } = await req.json();
     
-    // Try Lovable AI first, fall back to Google Gemini API key
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
     
     let explanation: any;
+    const errors: string[] = [];
 
+    // Fallback chain: Lovable AI → Groq → Gemini
     if (LOVABLE_API_KEY) {
       try {
         explanation = await generateWithLovableAI(LOVABLE_API_KEY, question);
       } catch (e) {
-        console.warn("Lovable AI failed, trying Gemini directly:", e);
-        if (!GOOGLE_GEMINI_API_KEY) throw e;
-        explanation = await generateWithGemini(GOOGLE_GEMINI_API_KEY, question);
+        console.warn("Lovable AI failed:", e);
+        errors.push(`Lovable: ${e}`);
       }
-    } else if (GOOGLE_GEMINI_API_KEY) {
-      explanation = await generateWithGemini(GOOGLE_GEMINI_API_KEY, question);
-    } else {
-      throw new Error("No AI API key configured");
+    }
+
+    if (!explanation && GROQ_API_KEY) {
+      try {
+        explanation = await generateWithGroq(GROQ_API_KEY, question);
+      } catch (e) {
+        console.warn("Groq failed:", e);
+        errors.push(`Groq: ${e}`);
+      }
+    }
+
+    if (!explanation && GOOGLE_GEMINI_API_KEY) {
+      try {
+        explanation = await generateWithGemini(GOOGLE_GEMINI_API_KEY, question);
+      } catch (e) {
+        console.warn("Gemini failed:", e);
+        errors.push(`Gemini: ${e}`);
+      }
+    }
+
+    if (!explanation) {
+      throw new Error(errors.length ? `All providers failed: ${errors.join("; ")}` : "No AI API key configured");
     }
 
     return new Response(JSON.stringify(explanation), {
