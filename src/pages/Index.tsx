@@ -3,6 +3,7 @@ import QuestionInput from "@/components/QuestionInput";
 import ProgressIndicator from "@/components/ProgressIndicator";
 import ScenePlayer from "@/components/ScenePlayer";
 import TextAnswer from "@/components/TextAnswer";
+import AnimatedTextVideo from "@/components/AnimatedTextVideo";
 import HistorySection from "@/components/HistorySection";
 import { useExplanationGenerator } from "@/hooks/useExplanationGenerator";
 
@@ -31,6 +32,11 @@ const Index = () => {
           <ScenePlayer
             scenes={explanation.scenes}
             title={explanation.title}
+          />
+          <AnimatedTextVideo
+            fullAnswer={explanation.fullAnswer || ""}
+            title={explanation.title}
+            scenes={explanation.scenes}
           />
           <TextAnswer
             title={explanation.title}
