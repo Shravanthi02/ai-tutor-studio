@@ -5,6 +5,41 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SYSTEM_PROMPT = `You are a world-class science educator who explains complex topics like a storyteller. Your explanations are:
+
+1. **Crystal clear**: Use simple everyday language. Avoid jargon — when you must use a technical term, immediately define it with a relatable analogy.
+2. **Visual & vivid**: Every sentence should paint a picture in the reader's mind. Use concrete imagery, comparisons to familiar objects, and sensory details.
+3. **Progressive**: Start from what the learner already knows, then build step-by-step to deeper understanding. Each scene should feel like a natural "next chapter."
+4. **Engaging**: Use "you" language, rhetorical questions, and "imagine this" scenarios to pull the reader in.
+5. **Accurate**: Never sacrifice scientific accuracy for simplicity.
+
+For image prompts: Create prompts that produce STUNNING, photorealistic or beautifully illustrated educational visuals. Think National Geographic quality meets textbook clarity. Each image should be a single, powerful visual that captures the essence of that scene — not a cluttered diagram.`;
+
+const USER_PROMPT_TEMPLATE = (question: string) => `Create an educational video explanation for: "${question}"
+
+SCENE TEXT RULES:
+- Write exactly 6-8 scenes
+- Each scene: 2-3 sentences maximum
+- Use vivid analogies (e.g., "Think of DNA like a twisted ladder" or "Electrons orbit like planets around a sun")
+- Start simple, build complexity gradually
+- Each scene should teach ONE clear concept
+- Use "Imagine..." or "Think of..." to make it visual
+
+IMAGE PROMPT RULES:
+- Each imagePrompt must create a BEAUTIFUL, clear, photorealistic or high-quality illustrated scene
+- Be extremely specific: describe lighting, angle, colors, composition
+- Style: "cinematic educational illustration, soft volumetric lighting, 4K quality, clean composition"
+- Show ONE clear subject per image — no cluttered diagrams
+- Examples of GOOD prompts:
+  "A single green leaf in bright sunlight, with golden light rays visibly entering the leaf surface, tiny glowing green chloroplasts visible inside, photorealistic macro photography, soft bokeh background, warm natural lighting"
+  "Cross-section of planet Earth floating in space, glowing orange magma core visible, tectonic plates shown as puzzle pieces on the surface, dramatic cinematic lighting, educational 3D render"
+
+FULL ANSWER RULES:
+- 3-5 paragraphs, at least 250 words
+- Written as a standalone mini-article
+- Include real-world examples and applications
+- End with a "why this matters" conclusion`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -18,7 +53,6 @@ serve(async (req) => {
     let explanation: any;
     const errors: string[] = [];
 
-    // Fallback chain: Lovable AI → Groq → Gemini
     if (LOVABLE_API_KEY) {
       try {
         explanation = await generateWithLovableAI(LOVABLE_API_KEY, question);
@@ -73,8 +107,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator. Your image prompts must DIRECTLY and LITERALLY illustrate exactly what the scene text describes. If the text talks about blood flowing through the heart, the image must show blood flowing through the heart — not an abstract metaphor. Every image should be a clear, accurate, labeled-diagram-quality educational illustration that helps the viewer instantly understand the concept described in the text." },
-        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each imagePrompt must be a LITERAL, ACCURATE visual depiction of exactly what the scene text describes. The image should look like a high-quality textbook illustration or educational animation frame that directly matches and reinforces the written explanation. Use clear colors, clean compositions, and realistic or semi-realistic style. NO abstract art, NO loose metaphors — the image must show exactly what the text says.` },
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: USER_PROMPT_TEMPLATE(question) },
       ],
       tools: [{
         type: "function",
@@ -84,15 +118,15 @@ async function generateWithLovableAI(apiKey: string, question: string) {
           parameters: {
             type: "object",
             properties: {
-              title: { type: "string" },
-              fullAnswer: { type: "string", description: "Comprehensive 3-5 paragraph explanation, at least 200 words" },
+              title: { type: "string", description: "A catchy, curiosity-sparking title (5-10 words)" },
+              fullAnswer: { type: "string", description: "Comprehensive 3-5 paragraph explanation, at least 250 words, written as an engaging mini-article" },
               scenes: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
-                    text: { type: "string", description: "2-3 sentence scene narration" },
-                    imagePrompt: { type: "string", description: "A LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept, process, or object mentioned in the text. Use clean educational illustration style with labeled-diagram clarity. Realistic or semi-realistic rendering, clear colors, proper scientific/educational accuracy. NO abstract metaphors — show exactly what the text says. NO TEXT or labels in the image. Example: If text says 'The heart pumps blood through arteries', the prompt should be 'Detailed anatomical cross-section of the human heart showing blood flowing from the left ventricle into the aorta, with red oxygenated blood clearly visible, clean medical illustration style, soft lighting, clear anatomy'" },
+                    text: { type: "string", description: "2-3 sentence scene narration using vivid analogies and simple language" },
+                    imagePrompt: { type: "string", description: "Detailed prompt for a stunning educational visual. Include: subject, composition, lighting (soft volumetric/cinematic/warm natural), style (photorealistic/3D render/illustration), colors, and camera angle. Must show ONE clear subject. End with: high quality, clean composition, no text no labels no words" },
                   },
                   required: ["text", "imagePrompt"],
                   additionalProperties: false,
@@ -121,14 +155,12 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 }
 
 async function generateWithGemini(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
+  const prompt = `${SYSTEM_PROMPT}
+
+${USER_PROMPT_TEMPLATE(question)}
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
-
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
-
-Question: ${question}`;
+{"title":"Catchy title","fullAnswer":"Comprehensive mini-article (250+ words)","scenes":[{"text":"2-3 sentence narration","imagePrompt":"Detailed visual prompt with lighting, style, composition details, ending with: high quality, clean composition, no text no labels"}]}`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -155,14 +187,12 @@ Question: ${question}`;
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
+  const prompt = `${SYSTEM_PROMPT}
+
+${USER_PROMPT_TEMPLATE(question)}
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
-
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
-
-Question: ${question}`;
+{"title":"Catchy title","fullAnswer":"Comprehensive mini-article (250+ words)","scenes":[{"text":"2-3 sentence narration","imagePrompt":"Detailed visual prompt with lighting, style, composition details, ending with: high quality, clean composition, no text no labels"}]}`;
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
