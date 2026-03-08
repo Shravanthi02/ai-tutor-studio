@@ -2,9 +2,6 @@ export interface Scene {
   text: string;
   imagePrompt: string;
   imageUrl?: string;
-  // Multiple images per scene
-  imagePrompts?: string[];
-  imageUrls?: string[];
 }
 
 export interface Explanation {

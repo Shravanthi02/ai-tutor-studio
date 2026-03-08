@@ -14,17 +14,15 @@ function loadHistory(): HistoryItem[] {
 }
 
 function saveHistory(items: HistoryItem[]) {
+  // Strip imageUrl (base64) to avoid localStorage quota issues
   const lite = items.slice(0, 20).map((item) => ({
     ...item,
-    scenes: item.scenes.map(({ text, imagePrompt, imagePrompts }) => ({
-      text,
-      imagePrompt,
-      imagePrompts,
-    })),
+    scenes: item.scenes.map(({ text, imagePrompt }) => ({ text, imagePrompt })),
   }));
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(lite));
   } catch {
+    // If still too large, keep only 5 items
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(lite.slice(0, 5)));
     } catch {
@@ -33,14 +31,13 @@ function saveHistory(items: HistoryItem[]) {
   }
 }
 
-// Generate ONE image per scene in parallel batches
+// Generate images in parallel batches of 3 for speed
 async function generateImagesParallel(
   scenes: Scene[],
   onProgress: (current: number) => void
 ): Promise<Scene[]> {
-  const BATCH_SIZE = 4;
-  const results: Scene[] = scenes.map((s) => ({ ...s }));
-  let completed = 0;
+  const BATCH_SIZE = 3;
+  const results: Scene[] = [...scenes];
 
   for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
     const batch = scenes.slice(i, i + BATCH_SIZE);
@@ -48,22 +45,22 @@ async function generateImagesParallel(
       const idx = i + batchIdx;
       try {
         const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: scene.imagePrompt, sceneText: scene.text, sceneIndex: idx },
+          body: { prompt: scene.imagePrompt },
         });
         if (!error && data?.imageUrl) {
-          results[idx].imageUrl = data.imageUrl;
+          results[idx] = { ...scene, imageUrl: data.imageUrl };
         }
       } catch {
-        // keep without image
+        // keep scene without image
       }
-      completed++;
-      onProgress(completed);
+      onProgress(idx + 1);
     });
 
     await Promise.all(promises);
 
+    // Small delay between batches to avoid rate limits
     if (i + BATCH_SIZE < scenes.length) {
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 500));
     }
   }
 
@@ -86,33 +83,34 @@ export function useExplanationGenerator() {
       });
 
       if (explError) {
+        // Try to extract the actual error message from the response data
         const errorMsg = explData?.error || explError.message || "Failed to generate explanation";
         throw new Error(errorMsg);
       }
       if (explData?.error) throw new Error(explData.error);
 
       const expl = explData as Explanation;
-
-      // Generate images for each scene
+      setExplanation(expl);
       setStatus("generating-images");
       setImageProgress({ current: 0, total: expl.scenes.length });
 
-      const scenesWithImages = await generateImagesParallel(
-        expl.scenes,
-        (current) => setImageProgress((prev) => ({ ...prev, current }))
-      );
+      // Generate images in parallel batches
+      const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
+        setImageProgress({ current, total: expl.scenes.length });
+      });
 
-      const finalExpl = { ...expl, scenes: scenesWithImages };
-      setExplanation(finalExpl);
+      const finalExplanation = { ...expl, scenes: scenesWithImages };
+      setExplanation(finalExplanation);
+      setImageProgress({ current: expl.scenes.length, total: expl.scenes.length });
       setStatus("ready");
 
       const item: HistoryItem = {
         id: crypto.randomUUID(),
         question,
-        title: finalExpl.title,
-        fullAnswer: finalExpl.fullAnswer || "",
+        title: expl.title,
+        fullAnswer: expl.fullAnswer || "",
         timestamp: Date.now(),
-        scenes: finalExpl.scenes,
+        scenes: scenesWithImages,
       };
       const newHistory = [item, ...history.filter((h) => h.question !== question)];
       setHistory(newHistory);

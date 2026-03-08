@@ -149,13 +149,7 @@
   100% { transform: scale(1) translate(1%, 0.5%); }
 }
 
-@keyframes kenBurns {
-  0% { transform: scale(1) translate(0, 0); }
-  50% { transform: scale(1.12) translate(-1.5%, -1%); }
-  100% { transform: scale(1.05) translate(1%, 0.5%); }
-}
-
-
+/* Crossfade transitions */
 @keyframes crossfadeIn {
   0% { opacity: 0; transform: scale(1.04); }
   100% { opacity: 1; transform: scale(1); }
@@ -188,47 +182,4 @@
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
-}
-
-/* Animated visual keyframes */
-@keyframes meshMove {
-  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  100% { transform: translate(3%, 2%) scale(1.08) rotate(1deg); }
-}
-
-@keyframes ringPulse {
-  0%, 100% { transform: scale(0.85); opacity: 0.06; }
-  50% { transform: scale(1.15); opacity: 0.18; }
-}
-
-@keyframes floatParticle {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.6) rotate(0deg); }
-  10% { opacity: var(--max-opacity, 0.5); }
-  90% { opacity: var(--max-opacity, 0.5); }
-  100% { opacity: 0; transform: translate(var(--drift-x), var(--drift-y)) scale(1.1) rotate(20deg); }
-}
-
-@keyframes centralPulse {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.12) rotate(3deg); }
-}
-
-@keyframes orbit {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes counterOrbit {
-  from { transform: translateX(-50%) rotate(0deg); }
-  to { transform: translateX(-50%) rotate(-360deg); }
-}
-
-@keyframes connectionFlow {
-  0% { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -24; }
-}
-
-@keyframes kwFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
 }
