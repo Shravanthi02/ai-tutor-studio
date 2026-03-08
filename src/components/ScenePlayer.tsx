@@ -262,9 +262,9 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Video viewport */}
       <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
-        {/* Multi-image layer */}
+        {/* Animated visual layer */}
         <div className="absolute inset-0 overflow-hidden">
-          <SceneImages
+          <SceneVisual
             scene={scene}
             animKey={animKey}
             sceneIndex={currentIndex}
