@@ -1,6 +1,15 @@
 export interface Scene {
+  scene_number: number;
+  title: string;
+  hook: string;
   text: string;
-  imagePrompt: string;
+  narration: string;
+  visuals: string[];
+  imageUrls?: string[];
+  animation: string;
+  transition: string;
+  // Legacy support
+  imagePrompt?: string;
   imageUrl?: string;
 }
 

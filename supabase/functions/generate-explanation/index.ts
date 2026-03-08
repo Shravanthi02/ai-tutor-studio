@@ -5,40 +5,74 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are a world-class science educator who explains complex topics like a storyteller. Your explanations are:
+const SYSTEM_PROMPT = `You are an AI cinematic explainer video generator. Your task is to convert a user's question into a visually rich animated explainer video structure.
 
-1. **Crystal clear**: Use simple everyday language. Avoid jargon — when you must use a technical term, immediately define it with a relatable analogy.
-2. **Visual & vivid**: Every sentence should paint a picture in the reader's mind. Use concrete imagery, comparisons to familiar objects, and sensory details.
-3. **Progressive**: Start from what the learner already knows, then build step-by-step to deeper understanding. Each scene should feel like a natural "next chapter."
-4. **Engaging**: Use "you" language, rhetorical questions, and "imagine this" scenarios to pull the reader in.
-5. **Accurate**: Never sacrifice scientific accuracy for simplicity.
+The output will power: Ken Burns animated images, cinematic scene transitions, text overlays, multiple visuals per scene, browser Text-To-Speech narration, and a detailed written explanation.
 
-For image prompts: Create prompts that produce STUNNING, photorealistic or beautifully illustrated educational visuals. Think National Geographic quality meets textbook clarity. Each image should be a single, powerful visual that captures the essence of that scene — not a cluttered diagram.`;
+VIDEO STYLE: Modern educational documentary with dark slate background, amber gold accents, minimal modern UI, cinematic lighting, clean educational illustration style, high clarity visuals.
 
-const USER_PROMPT_TEMPLATE = (question: string) => `Create an educational video explanation for: "${question}"
+STORYTELLING FLOW:
+Scene 1 — Curiosity Hook: Introduce the question in an intriguing way
+Scene 2 — Simple Explanation: Explain using simple language
+Scene 3 — Visual Demonstration: Show what it looks like visually
+Scene 4 — How It Works: Explain the mechanism
+Scene 5 — Analogy: Use a real-world comparison
+Scene 6 — Deeper Insight: Introduce slightly advanced ideas
+Scene 7 — Real-world Applications (optional)
+Scene 8 — Summary: Wrap up clearly
 
-SCENE TEXT RULES:
-- Write exactly 6-8 scenes
-- Each scene: 2-3 sentences maximum
-- Use vivid analogies (e.g., "Think of DNA like a twisted ladder" or "Electrons orbit like planets around a sun")
-- Start simple, build complexity gradually
-- Each scene should teach ONE clear concept
-- Use "Imagine..." or "Think of..." to make it visual
+VISUAL PROMPT RULES:
+- Each scene needs 2-3 image prompts
+- Include cinematic lighting, wide composition, scientific/educational illustration
+- Minimal background clutter, dramatic depth, clear focal subject
+- End each prompt with: "high quality, clean composition, no text no labels no words"
 
-IMAGE PROMPT RULES:
-- Each imagePrompt must create a BEAUTIFUL, clear, photorealistic or high-quality illustrated scene
-- Be extremely specific: describe lighting, angle, colors, composition
-- Style: "cinematic educational illustration, soft volumetric lighting, 4K quality, clean composition"
-- Show ONE clear subject per image — no cluttered diagrams
-- Examples of GOOD prompts:
-  "A single green leaf in bright sunlight, with golden light rays visibly entering the leaf surface, tiny glowing green chloroplasts visible inside, photorealistic macro photography, soft bokeh background, warm natural lighting"
-  "Cross-section of planet Earth floating in space, glowing orange magma core visible, tectonic plates shown as puzzle pieces on the surface, dramatic cinematic lighting, educational 3D render"
+NARRATION RULES:
+- Write natural spoken versions of the text
+- Use "Imagine..." or "Think of..." to make it engaging
+- Keep it conversational and clear
 
-FULL ANSWER RULES:
-- 3-5 paragraphs, at least 250 words
-- Written as a standalone mini-article
-- Include real-world examples and applications
-- End with a "why this matters" conclusion`;
+ANIMATION OPTIONS: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward
+TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal`;
+
+const toolSchema = {
+  type: "function" as const,
+  function: {
+    name: "create_cinematic_explanation",
+    description: "Create a cinematic explainer video structure with multiple visuals per scene.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "A catchy, curiosity-sparking title (5-10 words)" },
+        full_explanation: { type: "string", description: "Detailed written explanation, 3-5 paragraphs, 250+ words, beginner-friendly with examples and analogies" },
+        scenes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              scene_number: { type: "number" },
+              title: { type: "string", description: "Short scene title" },
+              hook: { type: "string", description: "Short attention-grabbing sentence" },
+              text: { type: "string", description: "2-3 sentences explanation" },
+              narration: { type: "string", description: "Natural spoken version for TTS" },
+              visuals: {
+                type: "array",
+                items: { type: "string" },
+                description: "2-3 cinematic image prompts with lighting, composition, style details. End each with: high quality, clean composition, no text no labels no words"
+              },
+              animation: { type: "string", description: "Camera animation: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward" },
+              transition: { type: "string", description: "Transition to next scene: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal" },
+            },
+            required: ["scene_number", "title", "hook", "text", "narration", "visuals", "animation", "transition"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["title", "full_explanation", "scenes"],
+      additionalProperties: false,
+    },
+  },
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -84,7 +118,10 @@ serve(async (req) => {
       throw new Error(errors.length ? `All providers failed: ${errors.join("; ")}` : "No AI API key configured");
     }
 
-    return new Response(JSON.stringify(explanation), {
+    // Normalize the response
+    const normalized = normalizeResponse(explanation);
+
+    return new Response(JSON.stringify(normalized), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
@@ -97,6 +134,23 @@ serve(async (req) => {
   }
 });
 
+function normalizeResponse(data: any) {
+  return {
+    title: data.title || "Explanation",
+    fullAnswer: data.full_explanation || data.fullAnswer || "",
+    scenes: (data.scenes || []).map((s: any, i: number) => ({
+      scene_number: s.scene_number || i + 1,
+      title: s.title || `Scene ${i + 1}`,
+      hook: s.hook || "",
+      text: s.text || "",
+      narration: s.narration || s.text || "",
+      visuals: s.visuals || (s.imagePrompt ? [s.imagePrompt] : []),
+      animation: s.animation || "slow zoom in",
+      transition: s.transition || "fade",
+    })),
+  };
+}
+
 async function generateWithLovableAI(apiKey: string, question: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -108,37 +162,10 @@ async function generateWithLovableAI(apiKey: string, question: string) {
       model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: USER_PROMPT_TEMPLATE(question) },
+        { role: "user", content: `Generate the cinematic animated explainer video structure for: "${question}"` },
       ],
-      tools: [{
-        type: "function",
-        function: {
-          name: "create_explanation",
-          description: "Create a structured educational explanation with scenes for an animated video.",
-          parameters: {
-            type: "object",
-            properties: {
-              title: { type: "string", description: "A catchy, curiosity-sparking title (5-10 words)" },
-              fullAnswer: { type: "string", description: "Comprehensive 3-5 paragraph explanation, at least 250 words, written as an engaging mini-article" },
-              scenes: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    text: { type: "string", description: "2-3 sentence scene narration using vivid analogies and simple language" },
-                    imagePrompt: { type: "string", description: "Detailed prompt for a stunning educational visual. Include: subject, composition, lighting (soft volumetric/cinematic/warm natural), style (photorealistic/3D render/illustration), colors, and camera angle. Must show ONE clear subject. End with: high quality, clean composition, no text no labels no words" },
-                  },
-                  required: ["text", "imagePrompt"],
-                  additionalProperties: false,
-                },
-              },
-            },
-            required: ["title", "fullAnswer", "scenes"],
-            additionalProperties: false,
-          },
-        },
-      }],
-      tool_choice: { type: "function", function: { name: "create_explanation" } },
+      tools: [toolSchema],
+      tool_choice: { type: "function", function: { name: "create_cinematic_explanation" } },
     }),
   });
 
@@ -155,12 +182,12 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 }
 
 async function generateWithGemini(apiKey: string, question: string) {
-  const prompt = `${SYSTEM_PROMPT}
+  const jsonPrompt = `${SYSTEM_PROMPT}
 
-${USER_PROMPT_TEMPLATE(question)}
+Generate the cinematic animated explainer video structure for: "${question}"
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Catchy title","fullAnswer":"Comprehensive mini-article (250+ words)","scenes":[{"text":"2-3 sentence narration","imagePrompt":"Detailed visual prompt with lighting, style, composition details, ending with: high quality, clean composition, no text no labels"}]}`;
+{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -168,7 +195,7 @@ You MUST respond with valid JSON only, no markdown, no code fences. Use this exa
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: jsonPrompt }] }],
         generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: "application/json" },
       }),
     }
@@ -177,7 +204,7 @@ You MUST respond with valid JSON only, no markdown, no code fences. Use this exa
   if (!response.ok) {
     const errText = await response.text();
     console.error("Gemini error:", response.status, errText);
-    throw new Error(response.status === 429 ? "Rate limited. Please try again shortly." : "Gemini API error");
+    throw new Error(response.status === 429 ? "Rate limited" : "Gemini API error");
   }
 
   const data = await response.json();
@@ -187,12 +214,12 @@ You MUST respond with valid JSON only, no markdown, no code fences. Use this exa
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const prompt = `${SYSTEM_PROMPT}
+  const jsonPrompt = `${SYSTEM_PROMPT}
 
-${USER_PROMPT_TEMPLATE(question)}
+Generate the cinematic animated explainer video structure for: "${question}"
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Catchy title","fullAnswer":"Comprehensive mini-article (250+ words)","scenes":[{"text":"2-3 sentence narration","imagePrompt":"Detailed visual prompt with lighting, style, composition details, ending with: high quality, clean composition, no text no labels"}]}`;
+{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}`;
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -202,7 +229,7 @@ You MUST respond with valid JSON only, no markdown, no code fences. Use this exa
     },
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: jsonPrompt }],
       temperature: 0.7,
       max_tokens: 4096,
       response_format: { type: "json_object" },

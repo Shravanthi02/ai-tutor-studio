@@ -14,15 +14,15 @@ function loadHistory(): HistoryItem[] {
 }
 
 function saveHistory(items: HistoryItem[]) {
-  // Strip imageUrl (base64) to avoid localStorage quota issues
   const lite = items.slice(0, 20).map((item) => ({
     ...item,
-    scenes: item.scenes.map(({ text, imagePrompt }) => ({ text, imagePrompt })),
+    scenes: item.scenes.map(({ scene_number, title, hook, text, narration, visuals, animation, transition }) => ({
+      scene_number, title, hook, text, narration, visuals, animation, transition,
+    })),
   }));
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(lite));
   } catch {
-    // If still too large, keep only 5 items
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(lite.slice(0, 5)));
     } catch {
@@ -31,38 +31,61 @@ function saveHistory(items: HistoryItem[]) {
   }
 }
 
-// Generate images in parallel batches of 3 for speed
-async function generateImagesParallel(
+// Generate images for all visual prompts across all scenes
+async function generateAllImages(
   scenes: Scene[],
-  onProgress: (current: number) => void
+  onProgress: (current: number, total: number) => void
 ): Promise<Scene[]> {
   const BATCH_SIZE = 3;
-  const results: Scene[] = [...scenes];
+  const results: Scene[] = scenes.map((s) => ({ ...s, imageUrls: [] }));
 
-  for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
-    const batch = scenes.slice(i, i + BATCH_SIZE);
-    const promises = batch.map(async (scene, batchIdx) => {
-      const idx = i + batchIdx;
+  // Flatten all visual prompts with scene/visual indices
+  const tasks: { sceneIdx: number; visualIdx: number; prompt: string }[] = [];
+  scenes.forEach((scene, si) => {
+    scene.visuals.forEach((prompt, vi) => {
+      tasks.push({ sceneIdx: si, visualIdx: vi, prompt });
+    });
+  });
+
+  const total = tasks.length;
+  let completed = 0;
+  onProgress(0, total);
+
+  for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
+    const batch = tasks.slice(i, i + BATCH_SIZE);
+    const promises = batch.map(async (task) => {
       try {
         const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: scene.imagePrompt },
+          body: { prompt: task.prompt },
         });
         if (!error && data?.imageUrl) {
-          results[idx] = { ...scene, imageUrl: data.imageUrl };
+          if (!results[task.sceneIdx].imageUrls) results[task.sceneIdx].imageUrls = [];
+          // Ensure array is properly sized
+          while (results[task.sceneIdx].imageUrls!.length <= task.visualIdx) {
+            results[task.sceneIdx].imageUrls!.push("");
+          }
+          results[task.sceneIdx].imageUrls![task.visualIdx] = data.imageUrl;
         }
       } catch {
-        // keep scene without image
+        // keep without image
       }
-      onProgress(idx + 1);
+      completed++;
+      onProgress(completed, total);
     });
 
     await Promise.all(promises);
 
-    // Small delay between batches to avoid rate limits
-    if (i + BATCH_SIZE < scenes.length) {
+    if (i + BATCH_SIZE < tasks.length) {
       await new Promise((r) => setTimeout(r, 500));
     }
   }
+
+  // Set first imageUrl for backward compat
+  results.forEach((scene) => {
+    if (scene.imageUrls?.length) {
+      scene.imageUrl = scene.imageUrls[0];
+    }
+  });
 
   return results;
 }
@@ -83,7 +106,6 @@ export function useExplanationGenerator() {
       });
 
       if (explError) {
-        // Try to extract the actual error message from the response data
         const errorMsg = explData?.error || explError.message || "Failed to generate explanation";
         throw new Error(errorMsg);
       }
@@ -92,16 +114,17 @@ export function useExplanationGenerator() {
       const expl = explData as Explanation;
       setExplanation(expl);
       setStatus("generating-images");
-      setImageProgress({ current: 0, total: expl.scenes.length });
 
-      // Generate images in parallel batches
-      const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
-        setImageProgress({ current, total: expl.scenes.length });
+      const totalVisuals = expl.scenes.reduce((sum, s) => sum + (s.visuals?.length || 0), 0);
+      setImageProgress({ current: 0, total: totalVisuals });
+
+      const scenesWithImages = await generateAllImages(expl.scenes, (current, total) => {
+        setImageProgress({ current, total });
       });
 
       const finalExplanation = { ...expl, scenes: scenesWithImages };
       setExplanation(finalExplanation);
-      setImageProgress({ current: expl.scenes.length, total: expl.scenes.length });
+      setImageProgress({ current: totalVisuals, total: totalVisuals });
       setStatus("ready");
 
       const item: HistoryItem = {
