@@ -40,7 +40,6 @@ async function generateImagesParallel(
 ): Promise<Scene[]> {
   const BATCH_SIZE = 4;
   const results: Scene[] = scenes.map((s) => ({ ...s }));
-
   let completed = 0;
 
   for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
@@ -93,16 +92,27 @@ export function useExplanationGenerator() {
       if (explData?.error) throw new Error(explData.error);
 
       const expl = explData as Explanation;
-      setExplanation(expl);
+
+      // Generate images for each scene
+      setStatus("generating-images");
+      setImageProgress({ current: 0, total: expl.scenes.length });
+
+      const scenesWithImages = await generateImagesParallel(
+        expl.scenes,
+        (current) => setImageProgress((prev) => ({ ...prev, current }))
+      );
+
+      const finalExpl = { ...expl, scenes: scenesWithImages };
+      setExplanation(finalExpl);
       setStatus("ready");
 
       const item: HistoryItem = {
         id: crypto.randomUUID(),
         question,
-        title: expl.title,
-        fullAnswer: expl.fullAnswer || "",
+        title: finalExpl.title,
+        fullAnswer: finalExpl.fullAnswer || "",
         timestamp: Date.now(),
-        scenes: expl.scenes,
+        scenes: finalExpl.scenes,
       };
       const newHistory = [item, ...history.filter((h) => h.question !== question)];
       setHistory(newHistory);
