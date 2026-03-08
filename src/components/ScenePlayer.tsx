@@ -69,8 +69,12 @@ function speakReliably(text: string, onEnd: () => void): () => void {
   };
 }
 
-// Try ElevenLabs TTS, return audio URL or null
+// ElevenLabs TTS is currently disabled (account blocked on free tier).
+// Set to true once you have a paid ElevenLabs plan.
+const ELEVENLABS_ENABLED = false;
+
 async function fetchElevenLabsAudio(text: string): Promise<string | null> {
+  if (!ELEVENLABS_ENABLED) return null;
   try {
     const response = await fetch(
       `${SUPABASE_URL}/functions/v1/elevenlabs-tts`,
@@ -86,7 +90,7 @@ async function fetchElevenLabsAudio(text: string): Promise<string | null> {
     );
     if (!response.ok) return null;
     const blob = await response.blob();
-    if (blob.size < 1000) return null; // too small = likely error
+    if (blob.size < 1000) return null;
     return URL.createObjectURL(blob);
   } catch {
     return null;
