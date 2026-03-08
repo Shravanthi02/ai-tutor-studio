@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AnimatedVisual from "@/components/AnimatedVisual";
 import type { Scene } from "@/types/scene";
 
 const LANGUAGES = [
@@ -148,50 +149,10 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Auto-rotating single image display (cycles through scene images) ---
-const SceneImages = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
-  const images = scene.imageUrls?.filter(Boolean) || (scene.imageUrl ? [scene.imageUrl] : []);
-  const [activeImg, setActiveImg] = useState(0);
-
-  // Auto-rotate through images every 4 seconds
-  useEffect(() => {
-    if (images.length <= 1) return;
-    setActiveImg(0);
-    const interval = setInterval(() => {
-      setActiveImg((prev) => (prev + 1) % images.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [images.length, animKey]);
-
-  if (images.length === 0) return <div className="w-full h-full shimmer" />;
-
-  const kbClass = KEN_BURNS_CLASSES[(sceneIndex + activeImg) % KEN_BURNS_CLASSES.length];
-
+// --- Animated visual display for each scene ---
+const SceneVisual = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
   return (
-    <div className="w-full h-full relative" key={animKey}>
-      {images.map((url, i) => (
-        <img
-          key={i}
-          src={url}
-          alt={`${scene.text} - view ${i + 1}`}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${kbClass}`}
-          style={{ opacity: i === activeImg ? 1 : 0 }}
-        />
-      ))}
-      {/* Image counter dots */}
-      {images.length > 1 && (
-        <div className="absolute top-3 left-3 flex gap-1 z-10">
-          {images.map((_, i) => (
-            <div
-              key={i}
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                i === activeImg ? "bg-primary scale-125" : "bg-foreground/40"
-              }`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <AnimatedVisual text={scene.text} sceneIndex={sceneIndex} animKey={animKey} />
   );
 };
 
@@ -301,9 +262,9 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Video viewport */}
       <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
-        {/* Multi-image layer */}
+        {/* Animated visual layer */}
         <div className="absolute inset-0 overflow-hidden">
-          <SceneImages
+          <SceneVisual
             scene={scene}
             animKey={animKey}
             sceneIndex={currentIndex}
