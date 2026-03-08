@@ -149,49 +149,29 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Scene visual: generated images with animated fallback ---
+// --- Scene visual: single generated image with animated fallback ---
 const SceneVisual = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
-  const images = scene.imageUrls?.filter(Boolean) || (scene.imageUrl ? [scene.imageUrl] : []);
+  const imageUrl = scene.imageUrl;
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [activeImg, setActiveImg] = useState(0);
 
-  useEffect(() => { setImgLoaded(false); setActiveImg(0); }, [animKey]);
+  useEffect(() => { setImgLoaded(false); }, [animKey]);
 
-  // Auto-rotate images every 4s
-  useEffect(() => {
-    if (images.length <= 1) return;
-    const interval = setInterval(() => setActiveImg((p) => (p + 1) % images.length), 4000);
-    return () => clearInterval(interval);
-  }, [images.length, animKey]);
-
-  const kbClass = KEN_BURNS_CLASSES[(sceneIndex + activeImg) % KEN_BURNS_CLASSES.length];
+  const kbClass = KEN_BURNS_CLASSES[sceneIndex % KEN_BURNS_CLASSES.length];
 
   return (
     <div className="w-full h-full relative" key={animKey}>
-      {/* Animated background (visible while images load or as base) */}
+      {/* Animated background (visible while image loads or if no image) */}
       <AnimatedVisual text={scene.text} sceneIndex={sceneIndex} animKey={animKey} />
 
-      {/* Generated images on top with Ken Burns */}
-      {images.map((url, i) => (
+      {/* Single generated image with Ken Burns */}
+      {imageUrl && (
         <img
-          key={i}
-          src={url}
+          src={imageUrl}
           alt={scene.text}
-          onLoad={() => { if (i === 0) setImgLoaded(true); }}
+          onLoad={() => setImgLoaded(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${kbClass}`}
-          style={{ opacity: i === activeImg && imgLoaded ? 1 : 0, zIndex: 2 }}
+          style={{ opacity: imgLoaded ? 1 : 0, zIndex: 2 }}
         />
-      ))}
-
-      {/* Image counter dots */}
-      {images.length > 1 && imgLoaded && (
-        <div className="absolute top-3 left-3 flex gap-1 z-10">
-          {images.map((_, i) => (
-            <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-              i === activeImg ? "bg-primary scale-125" : "bg-foreground/40"
-            }`} />
-          ))}
-        </div>
       )}
     </div>
   );
