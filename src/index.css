@@ -70,16 +70,35 @@
 }
 
 @layer utilities {
+  /* Ken Burns variants — each zooms/pans a different direction */
+  .ken-burns-1 {
+    animation: kenBurns1 8s ease-in-out forwards;
+  }
+  .ken-burns-2 {
+    animation: kenBurns2 8s ease-in-out forwards;
+  }
+  .ken-burns-3 {
+    animation: kenBurns3 8s ease-in-out forwards;
+  }
+  .ken-burns-4 {
+    animation: kenBurns4 8s ease-in-out forwards;
+  }
   .ken-burns {
-    animation: kenBurns 6s ease-in-out forwards;
+    animation: kenBurns1 8s ease-in-out forwards;
   }
 
   .scene-enter {
     animation: sceneEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
-
   .scene-exit {
     animation: sceneExit 0.6s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+  }
+
+  .crossfade-in {
+    animation: crossfadeIn 0.8s ease-in-out forwards;
+  }
+  .crossfade-out {
+    animation: crossfadeOut 0.6s ease-in-out forwards;
   }
 
   .glow-text {
@@ -91,7 +110,6 @@
     background-clip: padding-box;
     position: relative;
   }
-
   .gradient-border::before {
     content: '';
     position: absolute;
@@ -113,16 +131,39 @@
   }
 }
 
-@keyframes kenBurns {
+/* Ken Burns directional variants */
+@keyframes kenBurns1 {
   0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.15) translate(-2%, -1%); }
+  100% { transform: scale(1.18) translate(-2%, -1.5%); }
+}
+@keyframes kenBurns2 {
+  0% { transform: scale(1.05) translate(-1%, 0); }
+  100% { transform: scale(1.2) translate(1.5%, -2%); }
+}
+@keyframes kenBurns3 {
+  0% { transform: scale(1) translate(1%, 1%); }
+  100% { transform: scale(1.15) translate(-1%, 1.5%); }
+}
+@keyframes kenBurns4 {
+  0% { transform: scale(1.1) translate(0, -1%); }
+  100% { transform: scale(1) translate(1%, 0.5%); }
 }
 
+/* Crossfade transitions */
+@keyframes crossfadeIn {
+  0% { opacity: 0; transform: scale(1.04); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes crossfadeOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+/* Scene text enter with blur */
 @keyframes sceneEnter {
-  0% { opacity: 0; transform: scale(0.95) translateY(20px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+  0% { opacity: 0; transform: translateY(24px); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
-
 @keyframes sceneExit {
   0% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1.05); }
