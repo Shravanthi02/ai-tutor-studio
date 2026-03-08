@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AnimatedVisual from "@/components/AnimatedVisual";
 import type { Scene } from "@/types/scene";
 
 const LANGUAGES = [
