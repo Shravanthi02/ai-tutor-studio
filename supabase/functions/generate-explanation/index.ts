@@ -73,8 +73,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator." },
-        { role: "user", content: `Create an educational explanation for: ${question}` },
+        { role: "system", content: "You are an expert educational content creator and visual storyteller. Create vivid, engaging explanations that use creative metaphors, analogies, and visual imagery to make complex topics easy to understand." },
+        { role: "user", content: `Create an educational explanation for: ${question}. Make the image prompts extremely creative and visually striking - use metaphors, dramatic compositions, creative color palettes, and artistic styles like isometric 3D, watercolor, infographic, or cinematic photography to make each scene memorable and aid understanding.` },
       ],
       tools: [{
         type: "function",
@@ -92,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, question: string) {
                   type: "object",
                   properties: {
                     text: { type: "string", description: "2-3 sentence scene narration" },
-                    imagePrompt: { type: "string", description: "Detailed illustration description: clean modern educational illustration, vibrant colors, no text" },
+                    imagePrompt: { type: "string", description: "Highly creative and visually striking illustration prompt. Use specific art styles (isometric 3D, watercolor, flat design, cinematic, infographic, pixel art, paper cut-out, or neon glow). Include dramatic lighting, creative metaphors as visuals, rich color palettes, and clear visual hierarchy. NO TEXT in the image. Example: 'Isometric 3D cutaway of a plant cell showing chloroplasts glowing emerald green, with golden light beams entering through the cell wall, dramatic volumetric lighting, vibrant teal and gold palette'" },
                   },
                   required: ["text", "imagePrompt"],
                   additionalProperties: false,
@@ -121,12 +121,12 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 }
 
 async function generateWithGemini(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
+  const prompt = `You are an expert educational content creator and visual storyteller. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Detailed illustration description with: clean modern educational illustration, vibrant colors, no text in image"}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Highly creative illustration prompt using specific art styles (isometric 3D, watercolor, cinematic, infographic, neon glow, paper cut-out). Include dramatic lighting, creative visual metaphors, rich colors, clear visual hierarchy. NO TEXT in image."}]}
 
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. Use analogies and real-world examples. fullAnswer must be at least 200 words. imagePrompt must describe vivid educational illustrations.
+Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences with analogies and metaphors. Build concepts progressively. fullAnswer must be at least 200 words. imagePrompt MUST be extremely creative and visually striking - use specific art styles, dramatic compositions, visual metaphors, and cinematic lighting to make each scene memorable. Think of each image as a frame from a beautifully animated educational video.
 
 Question: ${question}`;
 
@@ -155,12 +155,12 @@ Question: ${question}`;
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
+  const prompt = `You are an expert educational content creator and visual storyteller. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Detailed illustration description with: clean modern educational illustration, vibrant colors, no text in image"}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Highly creative illustration prompt using specific art styles (isometric 3D, watercolor, cinematic, infographic, neon glow, paper cut-out). Include dramatic lighting, creative visual metaphors, rich colors, clear visual hierarchy. NO TEXT in image."}]}
 
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. Use analogies and real-world examples. fullAnswer must be at least 200 words. imagePrompt must describe vivid educational illustrations.
+Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences with analogies and metaphors. Build concepts progressively. fullAnswer must be at least 200 words. imagePrompt MUST be extremely creative and visually striking - use specific art styles, dramatic compositions, visual metaphors, and cinematic lighting to make each scene memorable. Think of each image as a frame from a beautifully animated educational video.
 
 Question: ${question}`;
 

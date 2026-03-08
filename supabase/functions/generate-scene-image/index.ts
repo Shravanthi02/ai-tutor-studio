@@ -57,8 +57,8 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Clean modern educational illustration, vibrant colors, no text: ${prompt}`;
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=800&height=600&nologo=true&seed=${Date.now()}`;
+  const enhancedPrompt = `Professional digital art, highly detailed, dramatic lighting, vibrant rich colors, 4K quality, educational illustration: ${prompt}`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=768&nologo=true&seed=${Date.now()}&model=flux`;
   
   // Verify the URL works by making a HEAD request
   const response = await fetch(url, { method: "GET", redirect: "follow" });
