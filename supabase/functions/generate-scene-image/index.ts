@@ -16,31 +16,19 @@ serve(async (req) => {
 
     let imageUrl: string | null = null;
 
-    // Try Lovable AI first
     if (!imageUrl && LOVABLE_API_KEY) {
-      try {
-        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt, sceneText);
-      } catch (e) {
-        console.warn("Lovable AI image failed:", e);
-      }
+      try { imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt, sceneText); }
+      catch (e) { console.warn("Lovable AI image failed:", e); }
     }
 
-    // Try Gemini
     if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
-      try {
-        imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt, sceneText);
-      } catch (e) {
-        console.warn("Gemini image failed:", e);
-      }
+      try { imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt, sceneText); }
+      catch (e) { console.warn("Gemini image failed:", e); }
     }
 
-    // Fallback: Pollinations.ai (free, no API key)
     if (!imageUrl) {
-      try {
-        imageUrl = await generateWithPollinations(prompt, sceneText, sceneIndex ?? 0);
-      } catch (e) {
-        console.warn("Pollinations failed:", e);
-      }
+      try { imageUrl = await generateWithPollinations(prompt, sceneText, sceneIndex ?? 0); }
+      catch (e) { console.warn("Pollinations failed:", e); }
     }
 
     if (!imageUrl) throw new Error("All image providers failed");
@@ -57,23 +45,17 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string, sceneText: string | undefined, sceneIndex: number): Promise<string> {
-  // Use sceneText as the PRIMARY description — it's exactly what the slide narrates
-  // Keep prompt short and specific to avoid URL truncation
-  let visualPrompt: string;
-  if (sceneText) {
-    // Extract the core concept from the narration (first 80 chars) and combine with the image prompt
-    const coreNarration = sceneText.substring(0, 80);
-    visualPrompt = `${coreNarration}. ${prompt}. realistic educational diagram, scientifically accurate, detailed, vibrant colors, no text no words no labels`;
-  } else {
-    visualPrompt = `${prompt}, realistic educational illustration, detailed, no text no words`;
-  }
+  // Use the imagePrompt as PRIMARY (it's crafted for image generation)
+  // Append style modifiers. Keep total under ~500 chars for URL reliability.
+  const imagePrompt = prompt.substring(0, 300);
+  const style = "realistic detailed educational textbook illustration, scientific diagram, accurate, no text no words no labels in image";
+  const visualPrompt = `${imagePrompt}, ${style}`;
 
-  // Use sceneIndex + random component for unique seed per scene
-  const uniqueSeed = sceneIndex * 100000 + Math.floor(Math.random() * 99999);
-  const encoded = encodeURIComponent(visualPrompt).substring(0, 800);
+  const uniqueSeed = sceneIndex * 137 + 42; // deterministic per scene
+  const encoded = encodeURIComponent(visualPrompt);
   const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&nologo=true&seed=${uniqueSeed}&model=flux`;
   
-  console.log(`Pollinations request for scene ${sceneIndex}: seed=${uniqueSeed}, prompt="${visualPrompt.substring(0, 100)}..."`);
+  console.log(`Pollinations scene ${sceneIndex}: "${visualPrompt.substring(0, 120)}..."`);
   
   const response = await fetch(url, { method: "GET", redirect: "follow" });
   if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
@@ -89,7 +71,7 @@ async function generateWithPollinations(prompt: string, sceneText: string | unde
 
 async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
   const contextInstruction = sceneText 
-    ? `You are generating an educational illustration. The scene being explained is: "${sceneText}". Generate an image that DIRECTLY and ACCURATELY represents this concept visually. The specific visual to create: ${prompt}` 
+    ? `Generate an educational illustration. Scene narration: "${sceneText}". Visual to create: ${prompt}. Make it accurate, detailed, like a textbook diagram.` 
     : `Generate an accurate educational illustration: ${prompt}`;
   
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -110,7 +92,6 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
 
   const data = await response.json();
   const message = data.choices?.[0]?.message;
-
   if (Array.isArray(message?.images)) {
     const img = message.images[0];
     if (img?.image_url?.url) return img.image_url.url;
@@ -121,17 +102,15 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
     if (imagePart?.inline_data) return `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`;
   }
   if (typeof message?.content === "string" && message.content.startsWith("data:")) return message.content;
-
   const parts = data.candidates?.[0]?.content?.parts || [];
   const inlinePart = parts.find((p: any) => p.inlineData);
   if (inlinePart?.inlineData) return `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
-
   throw new Error("No image in response");
 }
 
 async function generateWithGemini(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
   const contextInstruction = sceneText 
-    ? `Generate an educational illustration for this concept: "${sceneText}". Specific visual: ${prompt}` 
+    ? `Generate an educational illustration for: "${sceneText}". Specific visual: ${prompt}` 
     : prompt;
   
   const response = await fetch(
