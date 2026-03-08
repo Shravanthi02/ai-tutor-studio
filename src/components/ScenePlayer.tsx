@@ -287,6 +287,36 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-3 mt-4">
+        {/* Language selector */}
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowLangMenu(!showLangMenu)}
+            className="text-muted-foreground hover:text-foreground"
+            title="Change language"
+          >
+            <Globe className="w-4 h-4" />
+          </Button>
+          {showLangMenu && (
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[120px] z-50">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => { setSelectedLang(lang.code); setShowLangMenu(false); }}
+                  className={`w-full text-left px-3 py-1.5 text-sm font-body transition-colors ${
+                    selectedLang === lang.code
+                      ? "text-primary bg-primary/10"
+                      : "text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Button variant="ghost" size="icon" onClick={restart} className="text-muted-foreground hover:text-foreground">
           <RotateCcw className="w-4 h-4" />
         </Button>
