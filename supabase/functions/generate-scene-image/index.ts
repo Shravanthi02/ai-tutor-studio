@@ -79,7 +79,11 @@ async function generateWithPollinations(prompt: string, sceneText?: string): Pro
   return `data:image/jpeg;base64,${base64}`;
 }
 
-async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
+async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
+  const contextInstruction = sceneText 
+    ? `You are generating an educational illustration. The scene being explained is: "${sceneText}". Generate an image that DIRECTLY and ACCURATELY represents this concept visually. The specific visual to create: ${prompt}` 
+    : `Generate an accurate educational illustration: ${prompt}`;
+  
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -88,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
     },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-image",
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: contextInstruction }],
       modalities: ["image", "text"],
     }),
   });
