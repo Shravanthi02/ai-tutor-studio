@@ -5,37 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Generate a colorful SVG placeholder based on the prompt
-function generatePlaceholderSvg(prompt: string): string {
-  const colors = [
-    ["#4F46E5", "#7C3AED", "#2563EB"],
-    ["#059669", "#10B981", "#34D399"],
-    ["#D97706", "#F59E0B", "#FBBF24"],
-    ["#DC2626", "#EF4444", "#F87171"],
-    ["#7C3AED", "#A855F7", "#C084FC"],
-    ["#0891B2", "#06B6D4", "#22D3EE"],
-  ];
-  const hash = prompt.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const palette = colors[hash % colors.length];
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-    <defs>
-      <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:${palette[0]}"/>
-        <stop offset="100%" style="stop-color:${palette[1]}"/>
-      </linearGradient>
-    </defs>
-    <rect width="800" height="600" fill="url(#bg)"/>
-    <circle cx="200" cy="150" r="80" fill="${palette[2]}" opacity="0.3"/>
-    <circle cx="600" cy="400" r="120" fill="${palette[0]}" opacity="0.2"/>
-    <rect x="300" y="200" width="200" height="200" rx="20" fill="${palette[2]}" opacity="0.15"/>
-    <text x="400" y="320" text-anchor="middle" fill="white" font-family="system-ui" font-size="18" opacity="0.7">Image generating...</text>
-  </svg>`;
-
-  const base64 = btoa(svg);
-  return `data:image/svg+xml;base64,${base64}`;
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -65,11 +34,16 @@ serve(async (req) => {
       }
     }
 
-    // Fallback to SVG placeholder
+    // Fallback: Pollinations.ai (free, no API key needed)
     if (!imageUrl) {
-      console.log("All image providers exhausted, using placeholder");
-      imageUrl = generatePlaceholderSvg(prompt);
+      try {
+        imageUrl = await generateWithPollinations(prompt);
+      } catch (e) {
+        console.warn("Pollinations failed:", e);
+      }
     }
+
+    if (!imageUrl) throw new Error("All image providers failed");
 
     return new Response(JSON.stringify({ imageUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -81,6 +55,28 @@ serve(async (req) => {
     });
   }
 });
+
+async function generateWithPollinations(prompt: string): Promise<string> {
+  const enhancedPrompt = `Clean modern educational illustration, vibrant colors, no text: ${prompt}`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=800&height=600&nologo=true&seed=${Date.now()}`;
+  
+  // Verify the URL works by making a HEAD request
+  const response = await fetch(url, { method: "GET", redirect: "follow" });
+  if (!response.ok) {
+    await response.text();
+    throw new Error(`Pollinations error: ${response.status}`);
+  }
+  
+  // Convert to base64 to avoid CORS issues in the client
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+  return `data:image/jpeg;base64,${base64}`;
+}
 
 async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -105,7 +101,6 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
   const data = await response.json();
   const message = data.choices?.[0]?.message;
 
-  // Check for images array (new format)
   if (Array.isArray(message?.images)) {
     const img = message.images[0];
     if (img?.image_url?.url) return img.image_url.url;
