@@ -92,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, question: string) {
         type: "function",
         function: {
           name: "create_explanation",
-          description: "Create a structured educational explanation with scenes, each having multiple image prompts.",
+          description: "Create a structured educational explanation with scenes, each having a single image prompt.",
           parameters: {
             type: "object",
             properties: {
