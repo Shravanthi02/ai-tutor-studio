@@ -73,8 +73,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator and visual storyteller. Create vivid, engaging explanations that use creative metaphors, analogies, and visual imagery to make complex topics easy to understand." },
-        { role: "user", content: `Create an educational explanation for: ${question}. Make the image prompts extremely creative and visually striking - use metaphors, dramatic compositions, creative color palettes, and artistic styles like isometric 3D, watercolor, infographic, or cinematic photography to make each scene memorable and aid understanding.` },
+        { role: "system", content: "You are an expert educational content creator. Your image prompts must DIRECTLY and LITERALLY illustrate exactly what the scene text describes. If the text talks about blood flowing through the heart, the image must show blood flowing through the heart — not an abstract metaphor. Every image should be a clear, accurate, labeled-diagram-quality educational illustration that helps the viewer instantly understand the concept described in the text." },
+        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each imagePrompt must be a LITERAL, ACCURATE visual depiction of exactly what the scene text describes. The image should look like a high-quality textbook illustration or educational animation frame that directly matches and reinforces the written explanation. Use clear colors, clean compositions, and realistic or semi-realistic style. NO abstract art, NO loose metaphors — the image must show exactly what the text says.` },
       ],
       tools: [{
         type: "function",
