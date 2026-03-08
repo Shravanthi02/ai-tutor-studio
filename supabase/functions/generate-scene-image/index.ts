@@ -16,16 +16,19 @@ serve(async (req) => {
 
     let imageUrl: string | null = null;
 
+    // Try Lovable AI first
     if (!imageUrl && LOVABLE_API_KEY) {
       try { imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt, sceneText); }
       catch (e) { console.warn("Lovable AI image failed:", e); }
     }
 
+    // Try Gemini
     if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
       try { imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt, sceneText); }
       catch (e) { console.warn("Gemini image failed:", e); }
     }
 
+    // Fallback: Pollinations (free, no key needed)
     if (!imageUrl) {
       try { imageUrl = await generateWithPollinations(prompt, sceneText, sceneIndex ?? 0); }
       catch (e) { console.warn("Pollinations failed:", e); }
@@ -45,17 +48,20 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string, sceneText: string | undefined, sceneIndex: number): Promise<string> {
-  // Use the imagePrompt as PRIMARY (it's crafted for image generation)
-  // Append style modifiers. Keep total under ~500 chars for URL reliability.
-  const imagePrompt = prompt.substring(0, 300);
-  const style = "realistic detailed educational textbook illustration, scientific diagram, accurate, no text no words no labels in image";
-  const visualPrompt = `${imagePrompt}, ${style}`;
+  // Use imagePrompt as primary — it's crafted specifically for image generation
+  // Combine with scene text context for maximum relevance
+  const imageDesc = prompt.substring(0, 350);
+  const style = "realistic detailed educational illustration, accurate scientific diagram, vibrant colors, no text no words no labels";
+  const visualPrompt = `${imageDesc}, ${style}`;
 
-  const uniqueSeed = sceneIndex * 137 + 42; // deterministic per scene
+  // Use scene index + prompt hash for truly unique seeds
+  const hashCode = prompt.split("").reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
+  const uniqueSeed = Math.abs(sceneIndex * 100000 + hashCode) % 9999999;
+  
   const encoded = encodeURIComponent(visualPrompt);
   const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&nologo=true&seed=${uniqueSeed}&model=flux`;
   
-  console.log(`Pollinations scene ${sceneIndex}: "${visualPrompt.substring(0, 120)}..."`);
+  console.log(`Pollinations scene ${sceneIndex}: seed=${uniqueSeed}, prompt="${visualPrompt.substring(0, 100)}..."`);
   
   const response = await fetch(url, { method: "GET", redirect: "follow" });
   if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
@@ -70,8 +76,8 @@ async function generateWithPollinations(prompt: string, sceneText: string | unde
 }
 
 async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
-  const contextInstruction = sceneText 
-    ? `Generate an educational illustration. Scene narration: "${sceneText}". Visual to create: ${prompt}. Make it accurate, detailed, like a textbook diagram.` 
+  const instruction = sceneText 
+    ? `Generate a realistic educational illustration that EXACTLY depicts: "${sceneText}". Visual details: ${prompt}. Style: detailed textbook diagram, scientifically accurate, no text or labels.` 
     : `Generate an accurate educational illustration: ${prompt}`;
   
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -79,7 +85,7 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-image",
-      messages: [{ role: "user", content: contextInstruction }],
+      messages: [{ role: "user", content: instruction }],
       modalities: ["image", "text"],
     }),
   });
@@ -109,8 +115,8 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
 }
 
 async function generateWithGemini(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
-  const contextInstruction = sceneText 
-    ? `Generate an educational illustration for: "${sceneText}". Specific visual: ${prompt}` 
+  const instruction = sceneText 
+    ? `Generate a realistic educational illustration depicting: "${sceneText}". Visual: ${prompt}` 
     : prompt;
   
   const response = await fetch(
@@ -119,7 +125,7 @@ async function generateWithGemini(apiKey: string, prompt: string, sceneText?: st
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: contextInstruction }] }],
+        contents: [{ role: "user", parts: [{ text: instruction }] }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     }
