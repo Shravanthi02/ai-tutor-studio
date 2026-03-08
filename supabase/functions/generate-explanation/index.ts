@@ -69,7 +69,7 @@ const SCENE_SCHEMA = {
     imagePrompts: {
       type: "array",
       items: { type: "string" },
-      description: "Array of 2-3 DIFFERENT image prompts for this scene. Each prompt must illustrate a different aspect or detail mentioned in the scene text. Use clean educational illustration style, realistic rendering, accurate depiction. NO TEXT in images. Example for 'The heart pumps blood through arteries to deliver oxygen': ['Anatomical cross-section of the human heart with chambers labeled by color, showing blood flow direction with arrows, clean medical illustration', 'Network of red arteries branching from the aorta throughout the human body, detailed anatomical diagram on dark background', 'Close-up of red blood cells carrying oxygen molecules through an artery, microscopic view with warm lighting']"
+      description: "Array of 2-3 DIFFERENT image prompts for this scene. CRITICAL: Each prompt MUST directly depict the EXACT subject matter described in the scene text — not a generic or loosely related image. The image should visually represent what is being explained in the scene text. For example, if the scene text says 'Chloroplasts contain chlorophyll which absorbs sunlight', the prompts should show: ['Cross-section diagram of a chloroplast showing thylakoid membranes and stroma, with green chlorophyll pigments highlighted', 'Sunlight rays hitting a green leaf surface being absorbed by chlorophyll molecules, close-up microscopic view', 'Comparison diagram showing chlorophyll absorbing red and blue light wavelengths while reflecting green light']. Each prompt must be a vivid, specific description of the exact concept in the scene text. NO TEXT or labels in the images. Use realistic educational illustration style."
     },
   },
   required: ["text", "imagePrompts"],
@@ -86,8 +86,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator. For each scene, create 2-3 different image prompts that each illustrate a DIFFERENT aspect or detail of what the scene text describes. Images should be accurate, educational, and directly related to the text content." },
-        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each scene must have 2-3 imagePrompts (as an array). Each prompt should depict a DIFFERENT visual aspect of the scene text — e.g. an overview, a close-up detail, and a diagram. Use realistic educational illustration style. NO abstract art.` },
+        { role: "system", content: "You are an expert educational content creator. For each scene, create 2-3 different image prompts that DIRECTLY and PRECISELY illustrate the EXACT concepts described in the scene text. Each image prompt must visually depict the specific subject matter mentioned in that scene — not a loosely related or generic image. The images should look like they belong in an educational textbook illustrating that exact concept." },
+        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each scene must have 2-3 imagePrompts (as an array). Each image prompt MUST describe a visual that DIRECTLY represents the specific concept explained in that scene's text. For example, if the text talks about 'light reactions in thylakoid membranes', the image prompt should describe 'thylakoid membranes inside a chloroplast with light energy being absorbed', NOT a generic 'plant in sunlight'. Be SPECIFIC and LITERAL. NO abstract art. NO text/labels in images.` },
       ],
       tools: [{
         type: "function",
@@ -125,14 +125,14 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 const JSON_PROMPT = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompts":["First image prompt showing one aspect","Second image prompt showing another aspect","Third image prompt showing a detail or diagram"]}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompts":["First image prompt DIRECTLY depicting the exact concept in the scene text","Second image prompt showing a different visual angle of the SAME concept","Third image prompt showing a close-up or diagram of the SAME concept"]}]}
 
 Rules:
 - Create 6-8 scenes. Each scene text should be 2-3 sentences.
 - Each scene MUST have an "imagePrompts" array with 2-3 prompts.
-- Each image prompt in the array should depict a DIFFERENT visual aspect of the scene text (e.g. overview, close-up, diagram).
-- Image prompts must be LITERAL and ACCURATE — like textbook illustrations.
-- NO abstract art, NO text in images.
+- CRITICAL: Each image prompt MUST visually depict the EXACT subject described in that scene's text. If the scene text talks about "chloroplasts absorbing light", the image should show chloroplasts absorbing light — NOT a generic plant or sun image.
+- Image prompts must be SPECIFIC, LITERAL and ACCURATE — like precise textbook illustrations of the exact concept being explained.
+- NO abstract art, NO text or labels in images, NO generic stock-photo style images.
 - fullAnswer must be at least 200 words.`;
 
 async function generateWithGemini(apiKey: string, question: string) {
