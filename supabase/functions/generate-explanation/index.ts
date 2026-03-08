@@ -92,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, question: string) {
                   type: "object",
                   properties: {
                     text: { type: "string", description: "2-3 sentence scene narration" },
-                    imagePrompt: { type: "string", description: "Highly creative and visually striking illustration prompt. Use specific art styles (isometric 3D, watercolor, flat design, cinematic, infographic, pixel art, paper cut-out, or neon glow). Include dramatic lighting, creative metaphors as visuals, rich color palettes, and clear visual hierarchy. NO TEXT in the image. Example: 'Isometric 3D cutaway of a plant cell showing chloroplasts glowing emerald green, with golden light beams entering through the cell wall, dramatic volumetric lighting, vibrant teal and gold palette'" },
+                    imagePrompt: { type: "string", description: "A LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept, process, or object mentioned in the text. Use clean educational illustration style with labeled-diagram clarity. Realistic or semi-realistic rendering, clear colors, proper scientific/educational accuracy. NO abstract metaphors — show exactly what the text says. NO TEXT or labels in the image. Example: If text says 'The heart pumps blood through arteries', the prompt should be 'Detailed anatomical cross-section of the human heart showing blood flowing from the left ventricle into the aorta, with red oxygenated blood clearly visible, clean medical illustration style, soft lighting, clear anatomy'" },
                   },
                   required: ["text", "imagePrompt"],
                   additionalProperties: false,
