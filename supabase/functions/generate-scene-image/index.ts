@@ -56,8 +56,9 @@ serve(async (req) => {
   }
 });
 
-async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Accurate educational textbook illustration, clean and clear, realistic rendering, scientifically accurate, well-lit, detailed, easy to understand: ${prompt}`;
+async function generateWithPollinations(prompt: string, sceneText?: string): Promise<string> {
+  const contextPrefix = sceneText ? `Illustrating the concept: "${sceneText}". ` : "";
+  const enhancedPrompt = `${contextPrefix}Accurate educational textbook illustration, clean and clear, realistic rendering, scientifically accurate, well-lit, detailed, directly depicting the described concept: ${prompt}`;
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=768&nologo=true&seed=${Date.now()}&model=flux`;
   
   // Verify the URL works by making a HEAD request
