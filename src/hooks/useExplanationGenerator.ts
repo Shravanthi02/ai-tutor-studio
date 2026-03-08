@@ -33,42 +33,26 @@ function saveHistory(items: HistoryItem[]) {
   }
 }
 
-// Generate ALL images for all scenes in parallel batches
+// Generate ONE image per scene in parallel batches
 async function generateImagesParallel(
   scenes: Scene[],
   onProgress: (current: number) => void
 ): Promise<Scene[]> {
   const BATCH_SIZE = 4;
-  const results: Scene[] = scenes.map((s) => ({ ...s, imageUrls: [] }));
-
-  // Build a flat list of all image generation tasks
-  const tasks: { sceneIdx: number; promptIdx: number; prompt: string; sceneText: string }[] = [];
-  for (let si = 0; si < scenes.length; si++) {
-    const prompts = scenes[si].imagePrompts || [scenes[si].imagePrompt];
-    for (let pi = 0; pi < prompts.length; pi++) {
-      tasks.push({ sceneIdx: si, promptIdx: pi, prompt: prompts[pi], sceneText: scenes[si].text });
-    }
-  }
+  const results: Scene[] = scenes.map((s) => ({ ...s }));
 
   let completed = 0;
 
-  for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
-    const batch = tasks.slice(i, i + BATCH_SIZE);
-    const promises = batch.map(async (task) => {
+  for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
+    const batch = scenes.slice(i, i + BATCH_SIZE);
+    const promises = batch.map(async (scene, batchIdx) => {
+      const idx = i + batchIdx;
       try {
         const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: task.prompt, sceneText: task.sceneText },
+          body: { prompt: scene.imagePrompt, sceneText: scene.text },
         });
         if (!error && data?.imageUrl) {
-          if (!results[task.sceneIdx].imageUrls) {
-            results[task.sceneIdx].imageUrls = [];
-          }
-          // Ensure correct index
-          results[task.sceneIdx].imageUrls![task.promptIdx] = data.imageUrl;
-          // Set first image as main imageUrl for backward compat
-          if (task.promptIdx === 0) {
-            results[task.sceneIdx].imageUrl = data.imageUrl;
-          }
+          results[idx].imageUrl = data.imageUrl;
         }
       } catch {
         // keep without image
@@ -79,7 +63,7 @@ async function generateImagesParallel(
 
     await Promise.all(promises);
 
-    if (i + BATCH_SIZE < tasks.length) {
+    if (i + BATCH_SIZE < scenes.length) {
       await new Promise((r) => setTimeout(r, 300));
     }
   }

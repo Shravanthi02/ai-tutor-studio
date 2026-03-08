@@ -124,14 +124,13 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 const JSON_PROMPT = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompts":["First image prompt DIRECTLY depicting the exact concept in the scene text","Second image prompt showing a different visual angle of the SAME concept","Third image prompt showing a close-up or diagram of the SAME concept"]}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"A SINGLE specific image prompt that EXACTLY depicts the concept in the scene text, like a textbook illustration"}]}
 
 Rules:
 - Create 6-8 scenes. Each scene text should be 2-3 sentences.
-- Each scene MUST have an "imagePrompts" array with 2-3 prompts.
-- CRITICAL: Each image prompt MUST visually depict the EXACT subject described in that scene's text. If the scene text talks about "chloroplasts absorbing light", the image should show chloroplasts absorbing light — NOT a generic plant or sun image.
-- Image prompts must be SPECIFIC, LITERAL and ACCURATE — like precise textbook illustrations of the exact concept being explained.
-- NO abstract art, NO text or labels in images, NO generic stock-photo style images.
+- Each scene has ONE "imagePrompt" (string) — a LITERAL, SPECIFIC visual of the exact concept in that scene's text.
+- CRITICAL: If the scene text talks about "chloroplasts absorbing light", the image should show chloroplasts absorbing light — NOT a generic plant.
+- NO abstract art, NO text or labels in images.
 - fullAnswer must be at least 200 words.`;
 
 async function generateWithGemini(apiKey: string, question: string) {
