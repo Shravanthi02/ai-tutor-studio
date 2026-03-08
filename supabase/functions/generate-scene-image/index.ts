@@ -57,9 +57,12 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string, sceneText?: string): Promise<string> {
-  const contextPrefix = sceneText ? `Illustrating the concept: "${sceneText}". ` : "";
-  const enhancedPrompt = `${contextPrefix}Accurate educational textbook illustration, clean and clear, realistic rendering, scientifically accurate, well-lit, detailed, directly depicting the described concept: ${prompt}`;
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=768&nologo=true&seed=${Date.now()}&model=flux`;
+  // Use sceneText as the PRIMARY prompt since it describes exactly what the slide is about.
+  // The imagePrompt is used as a secondary detail. Keep it concise for Pollinations URL limits.
+  const visualDescription = sceneText 
+    ? `${sceneText} -- Visual style: ${prompt}, educational textbook illustration, realistic, scientifically accurate, detailed, no text or words in image`
+    : `${prompt}, educational textbook illustration, realistic, scientifically accurate, detailed, no text or words in image`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualDescription)}?width=1024&height=768&nologo=true&seed=${Date.now()}&model=flux`;
   
   // Verify the URL works by making a HEAD request
   const response = await fetch(url, { method: "GET", redirect: "follow" });
