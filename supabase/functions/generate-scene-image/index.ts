@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, sceneText } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
@@ -19,7 +19,7 @@ serve(async (req) => {
     // Try Lovable AI
     if (!imageUrl && LOVABLE_API_KEY) {
       try {
-        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
+        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt, sceneText);
       } catch (e) {
         console.warn("Lovable AI image failed:", e);
       }
@@ -28,7 +28,7 @@ serve(async (req) => {
     // Try Gemini
     if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
       try {
-        imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt);
+        imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt, sceneText);
       } catch (e) {
         console.warn("Gemini image failed:", e);
       }
@@ -37,7 +37,7 @@ serve(async (req) => {
     // Fallback: Pollinations.ai (free, no API key needed)
     if (!imageUrl) {
       try {
-        imageUrl = await generateWithPollinations(prompt);
+        imageUrl = await generateWithPollinations(prompt, sceneText);
       } catch (e) {
         console.warn("Pollinations failed:", e);
       }
@@ -56,8 +56,9 @@ serve(async (req) => {
   }
 });
 
-async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Accurate educational textbook illustration, clean and clear, realistic rendering, scientifically accurate, well-lit, detailed, easy to understand: ${prompt}`;
+async function generateWithPollinations(prompt: string, sceneText?: string): Promise<string> {
+  const contextPrefix = sceneText ? `Illustrating the concept: "${sceneText}". ` : "";
+  const enhancedPrompt = `${contextPrefix}Accurate educational textbook illustration, clean and clear, realistic rendering, scientifically accurate, well-lit, detailed, directly depicting the described concept: ${prompt}`;
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=768&nologo=true&seed=${Date.now()}&model=flux`;
   
   // Verify the URL works by making a HEAD request
@@ -78,7 +79,11 @@ async function generateWithPollinations(prompt: string): Promise<string> {
   return `data:image/jpeg;base64,${base64}`;
 }
 
-async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
+async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
+  const contextInstruction = sceneText 
+    ? `You are generating an educational illustration. The scene being explained is: "${sceneText}". Generate an image that DIRECTLY and ACCURATELY represents this concept visually. The specific visual to create: ${prompt}` 
+    : `Generate an accurate educational illustration: ${prompt}`;
+  
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -87,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
     },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-image",
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: contextInstruction }],
       modalities: ["image", "text"],
     }),
   });
@@ -125,14 +130,18 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
   throw new Error("No image in response");
 }
 
-async function generateWithGemini(apiKey: string, prompt: string): Promise<string> {
+async function generateWithGemini(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
+  const contextInstruction = sceneText 
+    ? `Generate an educational illustration for this concept: "${sceneText}". Specific visual: ${prompt}` 
+    : prompt;
+  
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: contextInstruction }] }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     }
