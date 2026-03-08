@@ -34,7 +34,7 @@ const ProgressIndicator = ({ status, currentStep, totalSteps }: ProgressIndicato
         </span>
         {totalSteps && status === "generating-images" && (
           <span className="text-sm text-muted-foreground font-body">
-            {currentStep}/{totalSteps} scenes
+            {currentStep}/{totalSteps} visuals
           </span>
         )}
       </div>

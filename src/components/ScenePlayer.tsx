@@ -9,10 +9,21 @@ interface ScenePlayerProps {
   onComplete?: () => void;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const ELEVENLABS_ENABLED = false;
-const KEN_BURNS_CLASSES = ["ken-burns-1", "ken-burns-2", "ken-burns-3", "ken-burns-4"];
+const ANIMATION_MAP: Record<string, string> = {
+  "slow zoom in": "ken-burns-1",
+  "zoom out reveal": "ken-burns-4",
+  "pan left to right": "ken-burns-3",
+  "parallax movement": "ken-burns-2",
+  "slow tilt upward": "ken-burns-1",
+};
+
+const TRANSITION_MAP: Record<string, string> = {
+  "fade": "crossfade-in",
+  "cross dissolve": "crossfade-in",
+  "cinematic zoom": "cinematic-zoom-in",
+  "slide transition": "slide-in-scene",
+  "parallax reveal": "parallax-reveal",
+};
 
 // --- Browser TTS with chunking ---
 function speakReliably(text: string, onEnd: () => void): () => void {
@@ -41,21 +52,6 @@ function speakReliably(text: string, onEnd: () => void): () => void {
 
   speakNext();
   return () => { cancelled = true; clearInterval(keepAlive); synth.cancel(); };
-}
-
-async function fetchElevenLabsAudio(text: string): Promise<string | null> {
-  if (!ELEVENLABS_ENABLED) return null;
-  try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/elevenlabs-tts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
-      body: JSON.stringify({ text }),
-    });
-    if (!response.ok) return null;
-    const blob = await response.blob();
-    if (blob.size < 1000) return null;
-    return URL.createObjectURL(blob);
-  } catch { return null; }
 }
 
 // --- Animated word-by-word text ---
@@ -95,31 +91,39 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Crossfade image layer with loading state ---
-const CrossfadeImage = ({ src, alt, animKey, sceneIndex }: { src?: string; alt: string; animKey: number; sceneIndex: number }) => {
-  const kbClass = KEN_BURNS_CLASSES[sceneIndex % KEN_BURNS_CLASSES.length];
+// --- Multi-visual crossfade layer ---
+const MultiVisualLayer = ({
+  imageUrls,
+  currentVisualIndex,
+  animationClass,
+  transitionClass,
+}: {
+  imageUrls: string[];
+  currentVisualIndex: number;
+  animationClass: string;
+  transitionClass: string;
+}) => {
+  const currentUrl = imageUrls[currentVisualIndex];
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
-    setError(false);
-    if (!src) return;
+    if (!currentUrl) return;
     const img = new Image();
     img.onload = () => setLoaded(true);
-    img.onerror = () => setError(true);
-    img.src = src;
-  }, [src]);
+    img.onerror = () => setLoaded(false);
+    img.src = currentUrl;
+  }, [currentUrl]);
 
-  if (!src || error) return <div className="w-full h-full shimmer" />;
+  if (!currentUrl) return <div className="w-full h-full shimmer" />;
 
   return (
-    <div className="w-full h-full crossfade-in" key={animKey}>
+    <div className={`w-full h-full ${transitionClass}`} key={`${currentVisualIndex}-${currentUrl.slice(-20)}`}>
       {!loaded && <div className="absolute inset-0 shimmer" />}
       <img
-        src={src}
-        alt={alt}
-        className={`w-full h-full object-cover ${kbClass} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        src={currentUrl}
+        alt=""
+        className={`w-full h-full object-cover ${animationClass} transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );
@@ -131,20 +135,38 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
   const [animKey, setAnimKey] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [textAnimActive, setTextAnimActive] = useState(true);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentVisualIdx, setCurrentVisualIdx] = useState(0);
   const cancelSpeechRef = useRef<(() => void) | null>(null);
-  const audioCache = useRef<Map<number, string | null>>(new Map());
   const mountedRef = useRef(true);
+  const visualTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scene = scenes[currentIndex];
+  const imageUrls = scene?.imageUrls?.filter(Boolean) || (scene?.imageUrl ? [scene.imageUrl] : []);
+  const animClass = ANIMATION_MAP[scene?.animation] || "ken-burns-1";
+  const transClass = TRANSITION_MAP[scene?.transition] || "crossfade-in";
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; stopAll(); };
   }, []);
 
+  // Cycle through visuals within a scene
+  useEffect(() => {
+    if (visualTimerRef.current) clearInterval(visualTimerRef.current);
+    setCurrentVisualIdx(0);
+
+    if (imageUrls.length > 1) {
+      visualTimerRef.current = setInterval(() => {
+        setCurrentVisualIdx((prev) => (prev + 1) % imageUrls.length);
+      }, 4000);
+    }
+
+    return () => {
+      if (visualTimerRef.current) clearInterval(visualTimerRef.current);
+    };
+  }, [currentIndex, imageUrls.length]);
+
   const stopAll = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; audioRef.current = null; }
     if (cancelSpeechRef.current) { cancelSpeechRef.current(); cancelSpeechRef.current = null; }
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
@@ -155,19 +177,15 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     setCurrentIndex(index);
     setAnimKey((k) => k + 1);
     setTextAnimActive(true);
+    setCurrentVisualIdx(0);
   }, [stopAll]);
 
-  const preloadAudio = useCallback(async (index: number) => {
-    if (audioCache.current.has(index) || index >= scenes.length) return;
-    audioCache.current.set(index, null);
-    const url = await fetchElevenLabsAudio(scenes[index].text);
-    audioCache.current.set(index, url);
-  }, [scenes]);
-
-  const playScene = useCallback(async (text: string, sceneIndex: number) => {
+  const playScene = useCallback(async (sceneData: Scene, sceneIndex: number) => {
     if (!mountedRef.current) return;
     setIsSpeaking(true);
     setTextAnimActive(true);
+
+    const narrationText = sceneData.narration || sceneData.text;
 
     const advanceToNext = () => {
       if (!mountedRef.current) return;
@@ -180,43 +198,27 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
       }
     };
 
-    let audioUrl = audioCache.current.get(sceneIndex);
-    if (audioUrl === undefined) {
-      audioUrl = await fetchElevenLabsAudio(text);
-      audioCache.current.set(sceneIndex, audioUrl);
-    }
-
-    if (audioUrl && mountedRef.current) {
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.onended = advanceToNext;
-      audio.onerror = () => { cancelSpeechRef.current = speakReliably(text, advanceToNext); };
-      try { await audio.play(); preloadAudio(sceneIndex + 1); return; } catch {}
-    }
-
-    if (mountedRef.current) {
-      cancelSpeechRef.current = speakReliably(text, advanceToNext);
-    }
-  }, [scenes.length, goToScene, onComplete, preloadAudio]);
+    cancelSpeechRef.current = speakReliably(narrationText, advanceToNext);
+  }, [scenes.length, goToScene, onComplete]);
 
   useEffect(() => {
     if (!isPlaying) return;
-    playScene(scene.text, currentIndex);
+    playScene(scene, currentIndex);
     return () => stopAll();
   }, [isPlaying, currentIndex]);
 
-  // Preload all scene images on mount
+  // Preload all images on mount
   useEffect(() => {
     scenes.forEach((s) => {
-      if (s.imageUrl) {
-        const img = new Image();
-        img.src = s.imageUrl;
-      }
+      s.imageUrls?.forEach((url) => {
+        if (url) { const img = new Image(); img.src = url; }
+      });
+      if (s.imageUrl) { const img = new Image(); img.src = s.imageUrl; }
     });
   }, [scenes]);
 
+  // Auto-play on mount
   useEffect(() => {
-    preloadAudio(0); preloadAudio(1); preloadAudio(2);
     const t = setTimeout(() => setIsPlaying(true), 500);
     return () => { clearTimeout(t); stopAll(); };
   }, []);
@@ -239,18 +241,27 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Video viewport */}
       <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
-        {/* Crossfade image layer */}
+        {/* Multi-visual layer */}
         <div className="absolute inset-0 overflow-hidden">
-          <CrossfadeImage
-            src={scene.imageUrl}
-            alt={scene.text}
-            animKey={animKey}
-            sceneIndex={currentIndex}
+          <MultiVisualLayer
+            imageUrls={imageUrls}
+            currentVisualIndex={currentVisualIdx}
+            animationClass={animClass}
+            transitionClass={transClass}
           />
         </div>
 
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+
+        {/* Scene title badge */}
+        {scene?.title && (
+          <div className="absolute top-4 left-4 z-10">
+            <span className="text-xs font-display font-semibold tracking-wider uppercase text-primary bg-primary/10 backdrop-blur-sm border border-primary/20 px-3 py-1 rounded-full">
+              {scene.title}
+            </span>
+          </div>
+        )}
 
         {/* Speaking indicator */}
         {isSpeaking && (
@@ -260,11 +271,35 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
           </div>
         )}
 
+        {/* Visual indicator dots */}
+        {imageUrls.length > 1 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {imageUrls.map((_, i) => (
+              <div
+                key={i}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  i === currentVisualIdx ? "bg-primary scale-125" : "bg-foreground/30"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Hook text */}
+        {scene?.hook && (
+          <div key={`hook-${animKey}`} className="absolute top-14 left-0 right-0 px-6 scene-enter z-10">
+            <p className="text-xs md:text-sm font-display text-primary/80 italic text-center">
+              {scene.hook}
+            </p>
+          </div>
+        )}
+
         {/* Animated text overlay */}
         <div key={`text-${animKey}`} className="absolute bottom-0 left-0 right-0 p-6 md:p-8 scene-enter">
-          <AnimatedSceneText text={scene.text} isActive={textAnimActive} />
-          <div className="mt-3 text-xs text-muted-foreground font-body">
-            Scene {currentIndex + 1} of {scenes.length}
+          <AnimatedSceneText text={scene?.text || ""} isActive={textAnimActive} />
+          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground font-body">
+            <span>Scene {currentIndex + 1} of {scenes.length}</span>
+            <span className="text-primary/60">{scene?.animation}</span>
           </div>
         </div>
       </div>

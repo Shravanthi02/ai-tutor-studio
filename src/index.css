@@ -101,6 +101,16 @@
     animation: crossfadeOut 0.6s ease-in-out forwards;
   }
 
+  .cinematic-zoom-in {
+    animation: cinematicZoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .slide-in-scene {
+    animation: slideInScene 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .parallax-reveal {
+    animation: parallaxReveal 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .glow-text {
     text-shadow: 0 0 30px hsl(var(--glow) / 0.3);
   }
@@ -172,6 +182,21 @@
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+@keyframes cinematicZoomIn {
+  0% { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInScene {
+  0% { opacity: 0; transform: translateX(40px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes parallaxReveal {
+  0% { opacity: 0; transform: scale(0.95) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes pulse-glow {

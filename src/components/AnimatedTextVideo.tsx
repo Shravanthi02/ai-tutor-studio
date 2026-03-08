@@ -39,22 +39,34 @@ function speakSentence(text: string, onEnd: () => void): () => void {
   };
 }
 
+// Collect all available images from scenes
+function getAllImages(scenes: Scene[]): string[] {
+  const imgs: string[] = [];
+  scenes.forEach((s) => {
+    if (s.imageUrls?.length) {
+      s.imageUrls.filter(Boolean).forEach((url) => imgs.push(url));
+    } else if (s.imageUrl) {
+      imgs.push(s.imageUrl);
+    }
+  });
+  return imgs;
+}
+
 const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps) => {
   const sentences = useMemo(() => splitIntoSentences(fullAnswer), [fullAnswer]);
+  const allImages = useMemo(() => getAllImages(scenes), [scenes]);
   const [currentSentence, setCurrentSentence] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const cancelRef = useRef<(() => void) | null>(null);
   const mountedRef = useRef(true);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Map sentences to background images from scenes
   const bgImageIndex = useMemo(() => {
-    if (!scenes.length) return 0;
-    return Math.floor((currentSentence / sentences.length) * scenes.length);
-  }, [currentSentence, sentences.length, scenes.length]);
+    if (!allImages.length) return 0;
+    return Math.floor((currentSentence / sentences.length) * allImages.length);
+  }, [currentSentence, sentences.length, allImages.length]);
 
-  const currentBgImage = scenes[Math.min(bgImageIndex, scenes.length - 1)]?.imageUrl;
+  const currentBgImage = allImages[Math.min(bgImageIndex, allImages.length - 1)];
   const kbClass = KEN_BURNS_CLASSES[bgImageIndex % KEN_BURNS_CLASSES.length];
 
   useEffect(() => {
@@ -85,7 +97,6 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
 
     cancelRef.current = speakSentence(sentences[index], () => {
       if (!mountedRef.current) return;
-      // Small pause between sentences
       setTimeout(() => {
         if (mountedRef.current) playSentence(index + 1);
       }, 400);
@@ -115,7 +126,6 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
 
   const progress = sentences.length > 0 ? ((currentSentence + 1) / sentences.length) * 100 : 0;
 
-  // Group sentences into visible context (show a window of sentences)
   const windowSize = 5;
   const windowStart = Math.max(0, currentSentence - 2);
   const windowEnd = Math.min(sentences.length, windowStart + windowSize);
@@ -130,11 +140,7 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
         </h3>
       </div>
 
-      {/* Video viewport */}
-      <div
-        ref={containerRef}
-        className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50"
-      >
+      <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
         {/* Background image */}
         <div className="absolute inset-0 overflow-hidden" key={bgImageIndex}>
           {currentBgImage ? (
@@ -148,10 +154,8 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
           )}
         </div>
 
-        {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/70 to-background/50" />
 
-        {/* Speaking indicator */}
         {isSpeaking && (
           <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/30 z-10">
             <Volume2 className="w-3.5 h-3.5 text-primary animate-pulse" />
@@ -159,21 +163,18 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
           </div>
         )}
 
-        {/* Title */}
         <div className="absolute top-4 left-4 z-10">
           <span className="text-xs text-primary font-display font-semibold tracking-wider uppercase">
             {title}
           </span>
         </div>
 
-        {/* Animated text content */}
         <div className="absolute inset-0 flex items-center justify-center p-8 md:p-12 z-10">
           <div className="max-w-2xl w-full space-y-3">
             {visibleSentences.map((sentence, i) => {
               const globalIndex = windowStart + i;
               const isCurrent = globalIndex === currentSentence;
               const isPast = globalIndex < currentSentence;
-              const isFuture = globalIndex > currentSentence;
 
               return (
                 <p
@@ -199,7 +200,6 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30 z-10">
           <div
             className="h-full bg-primary transition-all duration-500 ease-out"
@@ -207,7 +207,6 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
           />
         </div>
 
-        {/* Sentence counter */}
         <div className="absolute bottom-3 right-4 z-10">
           <span className="text-xs text-muted-foreground font-body">
             {currentSentence + 1} / {sentences.length}
@@ -215,21 +214,11 @@ const AnimatedTextVideo = ({ fullAnswer, title, scenes }: AnimatedTextVideoProps
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center justify-center gap-3 mt-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={restart}
-          className="text-muted-foreground hover:text-foreground"
-        >
+        <Button variant="ghost" size="icon" onClick={restart} className="text-muted-foreground hover:text-foreground">
           <RotateCcw className="w-4 h-4" />
         </Button>
-        <Button
-          onClick={togglePlay}
-          size="icon"
-          className="w-12 h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_hsl(var(--primary)/0.3)]"
-        >
+        <Button onClick={togglePlay} size="icon" className="w-12 h-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_20px_hsl(var(--primary)/0.3)]">
           {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
         </Button>
       </div>
