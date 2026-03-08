@@ -86,8 +86,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator. For each scene, create 2-3 different image prompts that each illustrate a DIFFERENT aspect or detail of what the scene text describes. Images should be accurate, educational, and directly related to the text content." },
-        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each scene must have 2-3 imagePrompts (as an array). Each prompt should depict a DIFFERENT visual aspect of the scene text — e.g. an overview, a close-up detail, and a diagram. Use realistic educational illustration style. NO abstract art.` },
+        { role: "system", content: "You are an expert educational content creator. For each scene, create 2-3 different image prompts that DIRECTLY and PRECISELY illustrate the EXACT concepts described in the scene text. Each image prompt must visually depict the specific subject matter mentioned in that scene — not a loosely related or generic image. The images should look like they belong in an educational textbook illustrating that exact concept." },
+        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each scene must have 2-3 imagePrompts (as an array). Each image prompt MUST describe a visual that DIRECTLY represents the specific concept explained in that scene's text. For example, if the text talks about 'light reactions in thylakoid membranes', the image prompt should describe 'thylakoid membranes inside a chloroplast with light energy being absorbed', NOT a generic 'plant in sunlight'. Be SPECIFIC and LITERAL. NO abstract art. NO text/labels in images.` },
       ],
       tools: [{
         type: "function",
