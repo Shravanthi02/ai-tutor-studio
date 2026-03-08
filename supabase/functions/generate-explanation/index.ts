@@ -155,12 +155,12 @@ Question: ${question}`;
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator and visual storyteller. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
+  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Highly creative illustration prompt using specific art styles (isometric 3D, watercolor, cinematic, infographic, neon glow, paper cut-out). Include dramatic lighting, creative visual metaphors, rich colors, clear visual hierarchy. NO TEXT in image."}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
 
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences with analogies and metaphors. Build concepts progressively. fullAnswer must be at least 200 words. imagePrompt MUST be extremely creative and visually striking - use specific art styles, dramatic compositions, visual metaphors, and cinematic lighting to make each scene memorable. Think of each image as a frame from a beautifully animated educational video.
+Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
 
 Question: ${question}`;
 
