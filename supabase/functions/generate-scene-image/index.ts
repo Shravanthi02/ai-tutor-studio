@@ -37,7 +37,7 @@ serve(async (req) => {
     // Fallback: Pollinations.ai (free, no API key needed)
     if (!imageUrl) {
       try {
-        imageUrl = await generateWithPollinations(prompt);
+        imageUrl = await generateWithPollinations(prompt, sceneText);
       } catch (e) {
         console.warn("Pollinations failed:", e);
       }
