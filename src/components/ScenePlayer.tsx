@@ -138,6 +138,8 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
   const [animKey, setAnimKey] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [textAnimActive, setTextAnimActive] = useState(true);
+  const [selectedLang, setSelectedLang] = useState(LANGUAGES[0].code);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cancelSpeechRef = useRef<(() => void) | null>(null);
   const audioCache = useRef<Map<number, string | null>>(new Map());
