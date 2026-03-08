@@ -42,11 +42,11 @@ async function generateImagesParallel(
   const results: Scene[] = scenes.map((s) => ({ ...s, imageUrls: [] }));
 
   // Build a flat list of all image generation tasks
-  const tasks: { sceneIdx: number; promptIdx: number; prompt: string }[] = [];
+  const tasks: { sceneIdx: number; promptIdx: number; prompt: string; sceneText: string }[] = [];
   for (let si = 0; si < scenes.length; si++) {
     const prompts = scenes[si].imagePrompts || [scenes[si].imagePrompt];
     for (let pi = 0; pi < prompts.length; pi++) {
-      tasks.push({ sceneIdx: si, promptIdx: pi, prompt: prompts[pi] });
+      tasks.push({ sceneIdx: si, promptIdx: pi, prompt: prompts[pi], sceneText: scenes[si].text });
     }
   }
 
