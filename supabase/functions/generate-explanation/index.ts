@@ -153,3 +153,40 @@ Question: ${question}`;
   if (!textContent) throw new Error("No response from Gemini");
   return JSON.parse(textContent);
 }
+
+async function generateWithGroq(apiKey: string, question: string) {
+  const prompt = `You are an expert educational content creator. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
+
+You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Detailed illustration description with: clean modern educational illustration, vibrant colors, no text in image"}]}
+
+Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. Use analogies and real-world examples. fullAnswer must be at least 200 words. imagePrompt must describe vivid educational illustrations.
+
+Question: ${question}`;
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 4096,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Groq error:", response.status, errText);
+    throw new Error(response.status === 429 ? "Rate limited" : "Groq API error");
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("No response from Groq");
+  return JSON.parse(content);
+}
