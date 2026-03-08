@@ -110,6 +110,22 @@ export function useExplanationGenerator() {
 
       const expl = explData as Explanation;
       setExplanation(expl);
+      setStatus("generating-images");
+
+      // Generate 2-3 images per scene
+      const totalImages = expl.scenes.reduce((sum, s) => {
+        const prompts = s.imagePrompts || [s.imagePrompt];
+        return sum + prompts.length;
+      }, 0);
+      setImageProgress({ current: 0, total: totalImages });
+
+      const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
+        setImageProgress({ current, total: totalImages });
+      });
+
+      const finalExplanation = { ...expl, scenes: scenesWithImages };
+      setExplanation(finalExplanation);
+      setImageProgress({ current: totalImages, total: totalImages });
       setStatus("ready");
 
       const item: HistoryItem = {
@@ -118,7 +134,7 @@ export function useExplanationGenerator() {
         title: expl.title,
         fullAnswer: expl.fullAnswer || "",
         timestamp: Date.now(),
-        scenes: expl.scenes,
+        scenes: scenesWithImages,
       };
       const newHistory = [item, ...history.filter((h) => h.question !== question)];
       setHistory(newHistory);

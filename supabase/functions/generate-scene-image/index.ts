@@ -10,11 +10,9 @@ serve(async (req) => {
 
   try {
     const { prompt, sceneText } = await req.json();
-
-    // Use sceneText as primary description — it's exactly what the slide narrates
-    const narration = sceneText || prompt;
     
-    // Build a concise, visual prompt from the narration
+    // Use sceneText as the PRIMARY visual description — it's exactly what the slide narrates
+    const narration = sceneText || prompt;
     const visualPrompt = buildVisualPrompt(narration, prompt);
     
     const imageUrl = await generateWithPollinations(visualPrompt);
@@ -30,31 +28,24 @@ serve(async (req) => {
   }
 });
 
-// Build a focused visual prompt from narration text
 function buildVisualPrompt(narration: string, imagePrompt: string): string {
-  // Extract key visual concepts from the narration (first 120 chars to avoid URL limits)
-  const shortNarration = narration.length > 120 ? narration.substring(0, 120) : narration;
-  
-  return `${shortNarration}, ${imagePrompt}, realistic educational illustration, detailed scientific diagram style, vibrant colors, no text no labels no words, clean composition`;
+  // Keep it short and focused for Pollinations URL limits
+  const short = narration.length > 100 ? narration.substring(0, 100) : narration;
+  return `${short}, ${imagePrompt}, realistic educational illustration, scientifically accurate, detailed, vibrant, no text no labels no words`;
 }
 
 async function generateWithPollinations(prompt: string): Promise<string> {
-  const encoded = encodeURIComponent(prompt);
-  // Keep URL under ~2000 chars for reliability
-  const url = `https://image.pollinations.ai/prompt/${encoded.substring(0, 800)}?width=1024&height=576&nologo=true&seed=${Date.now()}&model=flux`;
+  const encoded = encodeURIComponent(prompt).substring(0, 800);
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&nologo=true&seed=${Date.now()}&model=flux`;
   
   const response = await fetch(url, { method: "GET", redirect: "follow" });
-  if (!response.ok) {
-    throw new Error(`Pollinations error: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
   
-  // Convert to base64 to avoid CORS issues
   const arrayBuffer = await response.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  const base64 = btoa(binary);
-  return `data:image/jpeg;base64,${base64}`;
+  return `data:image/jpeg;base64,${btoa(binary)}`;
 }
