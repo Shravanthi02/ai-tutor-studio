@@ -21,8 +21,8 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const ELEVENLABS_ENABLED = false;
 const KEN_BURNS_CLASSES = ["ken-burns-1", "ken-burns-2", "ken-burns-3", "ken-burns-4"];
 
-// --- Browser TTS with chunking ---
-function speakReliably(text: string, onEnd: () => void): () => void {
+// --- Browser TTS with chunking and language support ---
+function speakReliably(text: string, lang: string, onEnd: () => void): () => void {
   let cancelled = false;
   const synth = window.speechSynthesis;
   synth.cancel();
@@ -34,11 +34,22 @@ function speakReliably(text: string, onEnd: () => void): () => void {
     if (synth.speaking) { synth.pause(); synth.resume(); }
   }, 5000);
 
+  // Find best matching voice for language
+  const findVoice = () => {
+    const voices = synth.getVoices();
+    return voices.find((v) => v.lang === lang) ||
+      voices.find((v) => v.lang.startsWith(lang.split("-")[0])) ||
+      null;
+  };
+
   function speakNext() {
     if (cancelled) { clearInterval(keepAlive); return; }
     if (currentIdx >= sentences.length) { clearInterval(keepAlive); onEnd(); return; }
 
     const u = new SpeechSynthesisUtterance(sentences[currentIdx].trim());
+    u.lang = lang;
+    const voice = findVoice();
+    if (voice) u.voice = voice;
     u.rate = 0.9;
     u.pitch = 1;
     u.onend = () => { currentIdx++; setTimeout(speakNext, 150); };
@@ -46,7 +57,13 @@ function speakReliably(text: string, onEnd: () => void): () => void {
     synth.speak(u);
   }
 
-  speakNext();
+  // Voices may load async
+  if (synth.getVoices().length === 0) {
+    synth.onvoiceschanged = () => speakNext();
+  } else {
+    speakNext();
+  }
+
   return () => { cancelled = true; clearInterval(keepAlive); synth.cancel(); };
 }
 
