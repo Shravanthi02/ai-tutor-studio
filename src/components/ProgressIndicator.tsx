@@ -36,7 +36,6 @@ const ProgressIndicator = ({ status, currentStep, totalSteps }: ProgressIndicato
           <span className="text-sm text-muted-foreground font-body">
             {currentStep}/{totalSteps} visuals
           </span>
-          </span>
         )}
       </div>
       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
