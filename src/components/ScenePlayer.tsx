@@ -35,33 +35,62 @@ function speakReliably(text: string, lang: string, onEnd: () => void): () => voi
   }, 5000);
 
   // Find best matching voice for language
-  const findVoice = () => {
-    const voices = synth.getVoices();
-    return voices.find((v) => v.lang === lang) ||
-      voices.find((v) => v.lang.startsWith(lang.split("-")[0])) ||
-      null;
+  const findVoice = (voices: SpeechSynthesisVoice[]) => {
+    // Exact match first (e.g. "hi-IN")
+    const exact = voices.find((v) => v.lang === lang);
+    if (exact) return exact;
+    // Prefix match (e.g. "hi")
+    const langPrefix = lang.split("-")[0];
+    const prefix = voices.find((v) => v.lang.startsWith(langPrefix));
+    if (prefix) return prefix;
+    // Fallback to default
+    return voices.find((v) => v.default) || voices[0] || null;
   };
 
-  function speakNext() {
+  function startSpeaking() {
     if (cancelled) { clearInterval(keepAlive); return; }
-    if (currentIdx >= sentences.length) { clearInterval(keepAlive); onEnd(); return; }
 
-    const u = new SpeechSynthesisUtterance(sentences[currentIdx].trim());
-    u.lang = lang;
-    const voice = findVoice();
-    if (voice) u.voice = voice;
-    u.rate = 0.9;
-    u.pitch = 1;
-    u.onend = () => { currentIdx++; setTimeout(speakNext, 150); };
-    u.onerror = () => { currentIdx++; setTimeout(speakNext, 150); };
-    synth.speak(u);
+    const voices = synth.getVoices();
+    const voice = findVoice(voices);
+
+    function speakNext() {
+      if (cancelled) { clearInterval(keepAlive); return; }
+      if (currentIdx >= sentences.length) { clearInterval(keepAlive); onEnd(); return; }
+
+      const u = new SpeechSynthesisUtterance(sentences[currentIdx].trim());
+      u.lang = lang;
+      if (voice) u.voice = voice;
+      u.rate = 0.9;
+      u.pitch = 1;
+      u.onend = () => { currentIdx++; setTimeout(speakNext, 150); };
+      u.onerror = (e) => {
+        console.warn("Speech error:", e);
+        currentIdx++;
+        setTimeout(speakNext, 150);
+      };
+      synth.speak(u);
+    }
+
+    speakNext();
   }
 
-  // Voices may load async
-  if (synth.getVoices().length === 0) {
-    synth.onvoiceschanged = () => speakNext();
+  // Voices may load asynchronously in some browsers
+  const voices = synth.getVoices();
+  if (voices.length === 0) {
+    const handler = () => {
+      synth.onvoiceschanged = null;
+      if (!cancelled) startSpeaking();
+    };
+    synth.onvoiceschanged = handler;
+    // Safety timeout — if voices never load, try anyway after 500ms
+    setTimeout(() => {
+      if (!cancelled && currentIdx === 0) {
+        synth.onvoiceschanged = null;
+        startSpeaking();
+      }
+    }, 500);
   } else {
-    speakNext();
+    startSpeaking();
   }
 
   return () => { cancelled = true; clearInterval(keepAlive); synth.cancel(); };
