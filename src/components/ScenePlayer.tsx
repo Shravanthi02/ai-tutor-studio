@@ -205,6 +205,16 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     return () => stopAll();
   }, [isPlaying, currentIndex]);
 
+  // Preload all scene images on mount
+  useEffect(() => {
+    scenes.forEach((s) => {
+      if (s.imageUrl) {
+        const img = new Image();
+        img.src = s.imageUrl;
+      }
+    });
+  }, [scenes]);
+
   useEffect(() => {
     preloadAudio(0); preloadAudio(1); preloadAudio(2);
     const t = setTimeout(() => setIsPlaying(true), 500);
