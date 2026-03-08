@@ -35,6 +35,7 @@ const Index = () => {
           <TextAnswer
             title={explanation.title}
             fullAnswer={explanation.fullAnswer || ""}
+            scenes={explanation.scenes}
           />
         </>
       )}
