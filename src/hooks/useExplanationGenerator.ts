@@ -118,7 +118,7 @@ export function useExplanationGenerator() {
         title: expl.title,
         fullAnswer: expl.fullAnswer || "",
         timestamp: Date.now(),
-        scenes: scenesWithImages,
+        scenes: expl.scenes,
       };
       const newHistory = [item, ...history.filter((h) => h.question !== question)];
       setHistory(newHistory);
