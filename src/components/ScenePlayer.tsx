@@ -95,15 +95,32 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Crossfade image layer ---
+// --- Crossfade image layer with loading state ---
 const CrossfadeImage = ({ src, alt, animKey, sceneIndex }: { src?: string; alt: string; animKey: number; sceneIndex: number }) => {
   const kbClass = KEN_BURNS_CLASSES[sceneIndex % KEN_BURNS_CLASSES.length];
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
 
-  if (!src) return <div className="w-full h-full shimmer" />;
+  useEffect(() => {
+    setLoaded(false);
+    setError(false);
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => setLoaded(true);
+    img.onerror = () => setError(true);
+    img.src = src;
+  }, [src]);
+
+  if (!src || error) return <div className="w-full h-full shimmer" />;
 
   return (
     <div className="w-full h-full crossfade-in" key={animKey}>
-      <img src={src} alt={alt} className={`w-full h-full object-cover ${kbClass}`} />
+      {!loaded && <div className="absolute inset-0 shimmer" />}
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-full object-cover ${kbClass} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
     </div>
   );
 };
@@ -187,6 +204,16 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     playScene(scene.text, currentIndex);
     return () => stopAll();
   }, [isPlaying, currentIndex]);
+
+  // Preload all scene images on mount
+  useEffect(() => {
+    scenes.forEach((s) => {
+      if (s.imageUrl) {
+        const img = new Image();
+        img.src = s.imageUrl;
+      }
+    });
+  }, [scenes]);
 
   useEffect(() => {
     preloadAudio(0); preloadAudio(1); preloadAudio(2);
