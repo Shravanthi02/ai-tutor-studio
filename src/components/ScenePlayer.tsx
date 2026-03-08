@@ -148,15 +148,36 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Crossfade image layer ---
-const CrossfadeImage = ({ src, alt, animKey, sceneIndex }: { src?: string; alt: string; animKey: number; sceneIndex: number }) => {
+// --- Multi-image crossfade layer ---
+const SceneImages = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
+  const images = scene.imageUrls?.filter(Boolean) || (scene.imageUrl ? [scene.imageUrl] : []);
   const kbClass = KEN_BURNS_CLASSES[sceneIndex % KEN_BURNS_CLASSES.length];
 
-  if (!src) return <div className="w-full h-full shimmer" />;
+  if (images.length === 0) return <div className="w-full h-full shimmer" />;
 
+  if (images.length === 1) {
+    return (
+      <div className="w-full h-full crossfade-in" key={animKey}>
+        <img src={images[0]} alt={scene.text} className={`w-full h-full object-cover ${kbClass}`} />
+      </div>
+    );
+  }
+
+  // Multiple images: show as split view
   return (
-    <div className="w-full h-full crossfade-in" key={animKey}>
-      <img src={src} alt={alt} className={`w-full h-full object-cover ${kbClass}`} />
+    <div className="w-full h-full crossfade-in flex" key={animKey}>
+      {images.map((url, i) => (
+        <div key={i} className="flex-1 overflow-hidden relative" style={{ animationDelay: `${i * 0.15}s` }}>
+          <img
+            src={url}
+            alt={`${scene.text} - view ${i + 1}`}
+            className={`w-full h-full object-cover ${KEN_BURNS_CLASSES[(sceneIndex + i) % KEN_BURNS_CLASSES.length]}`}
+          />
+          {i < images.length - 1 && (
+            <div className="absolute right-0 top-0 bottom-0 w-px bg-background/30" />
+          )}
+        </div>
+      ))}
     </div>
   );
 };
@@ -267,11 +288,10 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Video viewport */}
       <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
-        {/* Crossfade image layer */}
+        {/* Multi-image layer */}
         <div className="absolute inset-0 overflow-hidden">
-          <CrossfadeImage
-            src={scene.imageUrl}
-            alt={scene.text}
+          <SceneImages
+            scene={scene}
             animKey={animKey}
             sceneIndex={currentIndex}
           />

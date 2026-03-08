@@ -18,7 +18,6 @@ serve(async (req) => {
     let explanation: any;
     const errors: string[] = [];
 
-    // Fallback chain: Lovable AI → Groq → Gemini
     if (LOVABLE_API_KEY) {
       try {
         explanation = await generateWithLovableAI(LOVABLE_API_KEY, question);
@@ -63,6 +62,20 @@ serve(async (req) => {
   }
 });
 
+const SCENE_SCHEMA = {
+  type: "object",
+  properties: {
+    text: { type: "string", description: "2-3 sentence scene narration" },
+    imagePrompts: {
+      type: "array",
+      items: { type: "string" },
+      description: "Array of 2-3 DIFFERENT image prompts for this scene. Each prompt must illustrate a different aspect or detail mentioned in the scene text. Use clean educational illustration style, realistic rendering, accurate depiction. NO TEXT in images. Example for 'The heart pumps blood through arteries to deliver oxygen': ['Anatomical cross-section of the human heart with chambers labeled by color, showing blood flow direction with arrows, clean medical illustration', 'Network of red arteries branching from the aorta throughout the human body, detailed anatomical diagram on dark background', 'Close-up of red blood cells carrying oxygen molecules through an artery, microscopic view with warm lighting']"
+    },
+  },
+  required: ["text", "imagePrompts"],
+  additionalProperties: false,
+};
+
 async function generateWithLovableAI(apiKey: string, question: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -73,31 +86,20 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator. Your image prompts must DIRECTLY and LITERALLY illustrate exactly what the scene text describes. If the text talks about blood flowing through the heart, the image must show blood flowing through the heart — not an abstract metaphor. Every image should be a clear, accurate, labeled-diagram-quality educational illustration that helps the viewer instantly understand the concept described in the text." },
-        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each imagePrompt must be a LITERAL, ACCURATE visual depiction of exactly what the scene text describes. The image should look like a high-quality textbook illustration or educational animation frame that directly matches and reinforces the written explanation. Use clear colors, clean compositions, and realistic or semi-realistic style. NO abstract art, NO loose metaphors — the image must show exactly what the text says.` },
+        { role: "system", content: "You are an expert educational content creator. For each scene, create 2-3 different image prompts that each illustrate a DIFFERENT aspect or detail of what the scene text describes. Images should be accurate, educational, and directly related to the text content." },
+        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each scene must have 2-3 imagePrompts (as an array). Each prompt should depict a DIFFERENT visual aspect of the scene text — e.g. an overview, a close-up detail, and a diagram. Use realistic educational illustration style. NO abstract art.` },
       ],
       tools: [{
         type: "function",
         function: {
           name: "create_explanation",
-          description: "Create a structured educational explanation with scenes for an animated video.",
+          description: "Create a structured educational explanation with scenes, each having multiple image prompts.",
           parameters: {
             type: "object",
             properties: {
               title: { type: "string" },
               fullAnswer: { type: "string", description: "Comprehensive 3-5 paragraph explanation, at least 200 words" },
-              scenes: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    text: { type: "string", description: "2-3 sentence scene narration" },
-                    imagePrompt: { type: "string", description: "A LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept, process, or object mentioned in the text. Use clean educational illustration style with labeled-diagram clarity. Realistic or semi-realistic rendering, clear colors, proper scientific/educational accuracy. NO abstract metaphors — show exactly what the text says. NO TEXT or labels in the image. Example: If text says 'The heart pumps blood through arteries', the prompt should be 'Detailed anatomical cross-section of the human heart showing blood flowing from the left ventricle into the aorta, with red oxygenated blood clearly visible, clean medical illustration style, soft lighting, clear anatomy'" },
-                  },
-                  required: ["text", "imagePrompt"],
-                  additionalProperties: false,
-                },
-              },
+              scenes: { type: "array", items: SCENE_SCHEMA },
             },
             required: ["title", "fullAnswer", "scenes"],
             additionalProperties: false,
@@ -117,26 +119,30 @@ async function generateWithLovableAI(apiKey: string, question: string) {
   const data = await response.json();
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall?.function?.arguments) throw new Error("No response from AI");
-  return JSON.parse(toolCall.function.arguments);
+  return normalizeExplanation(JSON.parse(toolCall.function.arguments));
 }
 
-async function generateWithGemini(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
+const JSON_PROMPT = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompts":["First image prompt showing one aspect","Second image prompt showing another aspect","Third image prompt showing a detail or diagram"]}]}
 
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
+Rules:
+- Create 6-8 scenes. Each scene text should be 2-3 sentences.
+- Each scene MUST have an "imagePrompts" array with 2-3 prompts.
+- Each image prompt in the array should depict a DIFFERENT visual aspect of the scene text (e.g. overview, close-up, diagram).
+- Image prompts must be LITERAL and ACCURATE — like textbook illustrations.
+- NO abstract art, NO text in images.
+- fullAnswer must be at least 200 words.`;
 
-Question: ${question}`;
-
+async function generateWithGemini(apiKey: string, question: string) {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: `${JSON_PROMPT}\n\nQuestion: ${question}` }] }],
         generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: "application/json" },
       }),
     }
@@ -151,19 +157,10 @@ Question: ${question}`;
   const data = await response.json();
   const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!textContent) throw new Error("No response from Gemini");
-  return JSON.parse(textContent);
+  return normalizeExplanation(JSON.parse(textContent));
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
-
-You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
-
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
-
-Question: ${question}`;
-
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -172,7 +169,7 @@ Question: ${question}`;
     },
     body: JSON.stringify({
       model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: `${JSON_PROMPT}\n\nQuestion: ${question}` }],
       temperature: 0.7,
       max_tokens: 4096,
       response_format: { type: "json_object" },
@@ -188,5 +185,22 @@ Question: ${question}`;
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content;
   if (!content) throw new Error("No response from Groq");
-  return JSON.parse(content);
+  return normalizeExplanation(JSON.parse(content));
+}
+
+// Ensure backward compatibility: if AI returns old format (imagePrompt string), convert to imagePrompts array
+function normalizeExplanation(expl: any) {
+  if (expl.scenes) {
+    expl.scenes = expl.scenes.map((scene: any) => {
+      if (!scene.imagePrompts && scene.imagePrompt) {
+        scene.imagePrompts = [scene.imagePrompt];
+      }
+      // Also keep imagePrompt for backward compat (first one)
+      if (scene.imagePrompts && !scene.imagePrompt) {
+        scene.imagePrompt = scene.imagePrompts[0];
+      }
+      return scene;
+    });
+  }
+  return expl;
 }
