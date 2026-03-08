@@ -96,11 +96,8 @@ export function useExplanationGenerator() {
       setExplanation(expl);
       setStatus("generating-images");
 
-      // Generate 2-3 images per scene
-      const totalImages = expl.scenes.reduce((sum, s) => {
-        const prompts = s.imagePrompts || [s.imagePrompt];
-        return sum + prompts.length;
-      }, 0);
+      // Generate 1 image per scene
+      const totalImages = expl.scenes.length;
       setImageProgress({ current: 0, total: totalImages });
 
       const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
