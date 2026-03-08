@@ -1,7 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2 } from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Scene } from "@/types/scene";
+
+const LANGUAGES = [
+  { code: "en-US", label: "English" },
+  { code: "hi-IN", label: "हिन्दी" },
+  { code: "ta-IN", label: "தமிழ்" },
+  { code: "te-IN", label: "తెలుగు" },
+] as const;
 
 interface ScenePlayerProps {
   scenes: Scene[];
