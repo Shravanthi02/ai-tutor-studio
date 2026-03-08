@@ -49,7 +49,7 @@ async function generateImagesParallel(
       const idx = i + batchIdx;
       try {
         const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: scene.imagePrompt, sceneText: scene.text },
+          body: { prompt: scene.imagePrompt, sceneText: scene.text, sceneIndex: idx },
         });
         if (!error && data?.imageUrl) {
           results[idx].imageUrl = data.imageUrl;

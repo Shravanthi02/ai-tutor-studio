@@ -9,14 +9,14 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, sceneText } = await req.json();
+    const { prompt, sceneText, sceneIndex } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
 
     let imageUrl: string | null = null;
 
-    // Try Lovable AI
+    // Try Lovable AI first
     if (!imageUrl && LOVABLE_API_KEY) {
       try {
         imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt, sceneText);
@@ -34,10 +34,10 @@ serve(async (req) => {
       }
     }
 
-    // Fallback: Pollinations.ai (free, no API key needed)
+    // Fallback: Pollinations.ai (free, no API key)
     if (!imageUrl) {
       try {
-        imageUrl = await generateWithPollinations(prompt, sceneText);
+        imageUrl = await generateWithPollinations(prompt, sceneText, sceneIndex ?? 0);
       } catch (e) {
         console.warn("Pollinations failed:", e);
       }
@@ -56,16 +56,27 @@ serve(async (req) => {
   }
 });
 
-async function generateWithPollinations(prompt: string, sceneText?: string): Promise<string> {
-  const visualDescription = sceneText 
-    ? `${sceneText} -- Visual style: ${prompt}, educational textbook illustration, realistic, scientifically accurate, detailed, no text or words in image`
-    : `${prompt}, educational textbook illustration, realistic, scientifically accurate, detailed, no text or words in image`;
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(visualDescription).substring(0, 800)}?width=1024&height=768&nologo=true&seed=${Date.now()}&model=flux`;
+async function generateWithPollinations(prompt: string, sceneText: string | undefined, sceneIndex: number): Promise<string> {
+  // Use sceneText as the PRIMARY description — it's exactly what the slide narrates
+  // Keep prompt short and specific to avoid URL truncation
+  let visualPrompt: string;
+  if (sceneText) {
+    // Extract the core concept from the narration (first 80 chars) and combine with the image prompt
+    const coreNarration = sceneText.substring(0, 80);
+    visualPrompt = `${coreNarration}. ${prompt}. realistic educational diagram, scientifically accurate, detailed, vibrant colors, no text no words no labels`;
+  } else {
+    visualPrompt = `${prompt}, realistic educational illustration, detailed, no text no words`;
+  }
+
+  // Use sceneIndex + random component for unique seed per scene
+  const uniqueSeed = sceneIndex * 100000 + Math.floor(Math.random() * 99999);
+  const encoded = encodeURIComponent(visualPrompt).substring(0, 800);
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&nologo=true&seed=${uniqueSeed}&model=flux`;
+  
+  console.log(`Pollinations request for scene ${sceneIndex}: seed=${uniqueSeed}, prompt="${visualPrompt.substring(0, 100)}..."`);
   
   const response = await fetch(url, { method: "GET", redirect: "follow" });
-  if (!response.ok) {
-    throw new Error(`Pollinations error: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
   
   const arrayBuffer = await response.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
@@ -73,8 +84,7 @@ async function generateWithPollinations(prompt: string, sceneText?: string): Pro
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  const base64 = btoa(binary);
-  return `data:image/jpeg;base64,${base64}`;
+  return `data:image/jpeg;base64,${btoa(binary)}`;
 }
 
 async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
@@ -84,10 +94,7 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
   
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-image",
       messages: [{ role: "user", content: contextInstruction }],
@@ -108,22 +115,16 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
     const img = message.images[0];
     if (img?.image_url?.url) return img.image_url.url;
   }
-
   if (Array.isArray(message?.content)) {
     const imagePart = message.content.find((p: any) => p.type === "image_url" || p.inline_data);
     if (imagePart?.image_url?.url) return imagePart.image_url.url;
     if (imagePart?.inline_data) return `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`;
   }
-
-  if (typeof message?.content === "string" && message.content.startsWith("data:")) {
-    return message.content;
-  }
+  if (typeof message?.content === "string" && message.content.startsWith("data:")) return message.content;
 
   const parts = data.candidates?.[0]?.content?.parts || [];
   const inlinePart = parts.find((p: any) => p.inlineData);
-  if (inlinePart?.inlineData) {
-    return `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
-  }
+  if (inlinePart?.inlineData) return `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
 
   throw new Error("No image in response");
 }
