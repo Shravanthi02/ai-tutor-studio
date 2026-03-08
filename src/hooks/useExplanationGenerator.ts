@@ -57,7 +57,7 @@ async function generateImagesParallel(
     const promises = batch.map(async (task) => {
       try {
         const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: task.prompt },
+          body: { prompt: task.prompt, sceneText: task.sceneText },
         });
         if (!error && data?.imageUrl) {
           if (!results[task.sceneIdx].imageUrls) {
