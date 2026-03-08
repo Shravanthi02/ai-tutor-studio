@@ -14,15 +14,17 @@ function loadHistory(): HistoryItem[] {
 }
 
 function saveHistory(items: HistoryItem[]) {
-  // Strip imageUrl (base64) to avoid localStorage quota issues
   const lite = items.slice(0, 20).map((item) => ({
     ...item,
-    scenes: item.scenes.map(({ text, imagePrompt }) => ({ text, imagePrompt })),
+    scenes: item.scenes.map(({ text, imagePrompt, imagePrompts }) => ({
+      text,
+      imagePrompt,
+      imagePrompts,
+    })),
   }));
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(lite));
   } catch {
-    // If still too large, keep only 5 items
     try {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(lite.slice(0, 5)));
     } catch {
@@ -31,36 +33,54 @@ function saveHistory(items: HistoryItem[]) {
   }
 }
 
-// Generate images in parallel batches of 3 for speed
+// Generate ALL images for all scenes in parallel batches
 async function generateImagesParallel(
   scenes: Scene[],
   onProgress: (current: number) => void
 ): Promise<Scene[]> {
-  const BATCH_SIZE = 3;
-  const results: Scene[] = [...scenes];
+  const BATCH_SIZE = 4;
+  const results: Scene[] = scenes.map((s) => ({ ...s, imageUrls: [] }));
 
-  for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
-    const batch = scenes.slice(i, i + BATCH_SIZE);
-    const promises = batch.map(async (scene, batchIdx) => {
-      const idx = i + batchIdx;
+  // Build a flat list of all image generation tasks
+  const tasks: { sceneIdx: number; promptIdx: number; prompt: string }[] = [];
+  for (let si = 0; si < scenes.length; si++) {
+    const prompts = scenes[si].imagePrompts || [scenes[si].imagePrompt];
+    for (let pi = 0; pi < prompts.length; pi++) {
+      tasks.push({ sceneIdx: si, promptIdx: pi, prompt: prompts[pi] });
+    }
+  }
+
+  let completed = 0;
+
+  for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
+    const batch = tasks.slice(i, i + BATCH_SIZE);
+    const promises = batch.map(async (task) => {
       try {
         const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: scene.imagePrompt },
+          body: { prompt: task.prompt },
         });
         if (!error && data?.imageUrl) {
-          results[idx] = { ...scene, imageUrl: data.imageUrl };
+          if (!results[task.sceneIdx].imageUrls) {
+            results[task.sceneIdx].imageUrls = [];
+          }
+          // Ensure correct index
+          results[task.sceneIdx].imageUrls![task.promptIdx] = data.imageUrl;
+          // Set first image as main imageUrl for backward compat
+          if (task.promptIdx === 0) {
+            results[task.sceneIdx].imageUrl = data.imageUrl;
+          }
         }
       } catch {
-        // keep scene without image
+        // keep without image
       }
-      onProgress(idx + 1);
+      completed++;
+      onProgress(completed);
     });
 
     await Promise.all(promises);
 
-    // Small delay between batches to avoid rate limits
-    if (i + BATCH_SIZE < scenes.length) {
-      await new Promise((r) => setTimeout(r, 500));
+    if (i + BATCH_SIZE < tasks.length) {
+      await new Promise((r) => setTimeout(r, 300));
     }
   }
 
@@ -83,7 +103,6 @@ export function useExplanationGenerator() {
       });
 
       if (explError) {
-        // Try to extract the actual error message from the response data
         const errorMsg = explData?.error || explError.message || "Failed to generate explanation";
         throw new Error(errorMsg);
       }
@@ -92,16 +111,21 @@ export function useExplanationGenerator() {
       const expl = explData as Explanation;
       setExplanation(expl);
       setStatus("generating-images");
-      setImageProgress({ current: 0, total: expl.scenes.length });
 
-      // Generate images in parallel batches
+      // Count total images (2-3 per scene)
+      const totalImages = expl.scenes.reduce((sum, s) => {
+        const prompts = s.imagePrompts || [s.imagePrompt];
+        return sum + prompts.length;
+      }, 0);
+      setImageProgress({ current: 0, total: totalImages });
+
       const scenesWithImages = await generateImagesParallel(expl.scenes, (current) => {
-        setImageProgress({ current, total: expl.scenes.length });
+        setImageProgress({ current, total: totalImages });
       });
 
       const finalExplanation = { ...expl, scenes: scenesWithImages };
       setExplanation(finalExplanation);
-      setImageProgress({ current: expl.scenes.length, total: expl.scenes.length });
+      setImageProgress({ current: totalImages, total: totalImages });
       setStatus("ready");
 
       const item: HistoryItem = {
