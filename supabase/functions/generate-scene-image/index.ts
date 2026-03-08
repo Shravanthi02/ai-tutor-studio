@@ -130,14 +130,18 @@ async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?:
   throw new Error("No image in response");
 }
 
-async function generateWithGemini(apiKey: string, prompt: string): Promise<string> {
+async function generateWithGemini(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
+  const contextInstruction = sceneText 
+    ? `Generate an educational illustration for this concept: "${sceneText}". Specific visual: ${prompt}` 
+    : prompt;
+  
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: contextInstruction }] }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     }
