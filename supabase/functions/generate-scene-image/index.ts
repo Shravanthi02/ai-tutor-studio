@@ -28,10 +28,10 @@ serve(async (req) => {
       catch (e) { console.warn("Gemini image failed:", e); }
     }
 
-    // Fallback: Pollinations (free, no key needed)
+    // Fallback: Pollinations (free, no key needed) — return direct URL for client to load
     if (!imageUrl) {
-      try { imageUrl = await generateWithPollinations(prompt, sceneText, sceneIndex ?? 0); }
-      catch (e) { console.warn("Pollinations failed:", e); }
+      try { imageUrl = generatePollinationsUrl(prompt, sceneText, sceneIndex ?? 0); }
+      catch (e) { console.warn("Pollinations URL failed:", e); }
     }
 
     if (!imageUrl) throw new Error("All image providers failed");
@@ -47,32 +47,24 @@ serve(async (req) => {
   }
 });
 
-async function generateWithPollinations(prompt: string, sceneText: string | undefined, sceneIndex: number): Promise<string> {
-  // Use imagePrompt as primary — it's crafted specifically for image generation
-  // Combine with scene text context for maximum relevance
+// Return a direct Pollinations URL — the client browser loads this directly as an <img src>
+function generatePollinationsUrl(prompt: string, sceneText: string | undefined, sceneIndex: number): string {
+  // Use the imagePrompt as primary (crafted for image generation)
   const imageDesc = prompt.substring(0, 350);
-  const style = "realistic detailed educational illustration, accurate scientific diagram, vibrant colors, no text no words no labels";
+  const style = "realistic detailed educational textbook illustration, accurate, vibrant colors, high quality, no text no words no labels";
   const visualPrompt = `${imageDesc}, ${style}`;
 
-  // Use scene index + prompt hash for truly unique seeds
+  // Unique seed per scene
   const hashCode = prompt.split("").reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
   const uniqueSeed = Math.abs(sceneIndex * 100000 + hashCode) % 9999999;
-  
+
   const encoded = encodeURIComponent(visualPrompt);
-  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&nologo=true&seed=${uniqueSeed}&model=flux`;
+  // Use flux-realism model for better quality and relevance
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=576&seed=${uniqueSeed}&model=flux-realism&nologo=true&enhance=true`;
   
   console.log(`Pollinations scene ${sceneIndex}: seed=${uniqueSeed}, prompt="${visualPrompt.substring(0, 100)}..."`);
   
-  const response = await fetch(url, { method: "GET", redirect: "follow" });
-  if (!response.ok) throw new Error(`Pollinations error: ${response.status}`);
-  
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return `data:image/jpeg;base64,${btoa(binary)}`;
+  return url;
 }
 
 async function generateWithLovableAI(apiKey: string, prompt: string, sceneText?: string): Promise<string> {
