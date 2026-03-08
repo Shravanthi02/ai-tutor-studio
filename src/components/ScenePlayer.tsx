@@ -152,7 +152,7 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
 // --- Scene visual: animated visuals matched to narration text ---
 const SceneVisual = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
   return (
-    <AnimatedVisual text={scene.text} sceneIndex={sceneIndex} animKey={animKey} />
+    <AnimatedVisual text={scene.text} sceneIndex={sceneIndex} animKey={animKey} imageUrl={scene.imageUrl} />
   );
 };
 

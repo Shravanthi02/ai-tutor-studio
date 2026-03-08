@@ -149,7 +149,13 @@
   100% { transform: scale(1) translate(1%, 0.5%); }
 }
 
-/* Crossfade transitions */
+@keyframes kenBurns {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.12) translate(-1.5%, -1%); }
+  100% { transform: scale(1.05) translate(1%, 0.5%); }
+}
+
+
 @keyframes crossfadeIn {
   0% { opacity: 0; transform: scale(1.04); }
   100% { opacity: 1; transform: scale(1); }
