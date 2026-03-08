@@ -204,9 +204,9 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     }
 
     if (mountedRef.current) {
-      cancelSpeechRef.current = speakReliably(text, advanceToNext);
+      cancelSpeechRef.current = speakReliably(text, selectedLang, advanceToNext);
     }
-  }, [scenes.length, goToScene, onComplete, preloadAudio]);
+  }, [scenes.length, goToScene, onComplete, preloadAudio, selectedLang]);
 
   useEffect(() => {
     if (!isPlaying) return;
