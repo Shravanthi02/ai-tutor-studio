@@ -92,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, question: string) {
                   type: "object",
                   properties: {
                     text: { type: "string", description: "2-3 sentence scene narration" },
-                    imagePrompt: { type: "string", description: "Detailed illustration description: clean modern educational illustration, vibrant colors, no text" },
+                    imagePrompt: { type: "string", description: "Highly creative and visually striking illustration prompt. Use specific art styles (isometric 3D, watercolor, flat design, cinematic, infographic, pixel art, paper cut-out, or neon glow). Include dramatic lighting, creative metaphors as visuals, rich color palettes, and clear visual hierarchy. NO TEXT in the image. Example: 'Isometric 3D cutaway of a plant cell showing chloroplasts glowing emerald green, with golden light beams entering through the cell wall, dramatic volumetric lighting, vibrant teal and gold palette'" },
                   },
                   required: ["text", "imagePrompt"],
                   additionalProperties: false,
