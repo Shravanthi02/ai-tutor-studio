@@ -73,8 +73,8 @@ async function generateWithLovableAI(apiKey: string, question: string) {
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
-        { role: "system", content: "You are an expert educational content creator and visual storyteller. Create vivid, engaging explanations that use creative metaphors, analogies, and visual imagery to make complex topics easy to understand." },
-        { role: "user", content: `Create an educational explanation for: ${question}. Make the image prompts extremely creative and visually striking - use metaphors, dramatic compositions, creative color palettes, and artistic styles like isometric 3D, watercolor, infographic, or cinematic photography to make each scene memorable and aid understanding.` },
+        { role: "system", content: "You are an expert educational content creator. Your image prompts must DIRECTLY and LITERALLY illustrate exactly what the scene text describes. If the text talks about blood flowing through the heart, the image must show blood flowing through the heart — not an abstract metaphor. Every image should be a clear, accurate, labeled-diagram-quality educational illustration that helps the viewer instantly understand the concept described in the text." },
+        { role: "user", content: `Create an educational explanation for: ${question}. CRITICAL: Each imagePrompt must be a LITERAL, ACCURATE visual depiction of exactly what the scene text describes. The image should look like a high-quality textbook illustration or educational animation frame that directly matches and reinforces the written explanation. Use clear colors, clean compositions, and realistic or semi-realistic style. NO abstract art, NO loose metaphors — the image must show exactly what the text says.` },
       ],
       tools: [{
         type: "function",
@@ -92,7 +92,7 @@ async function generateWithLovableAI(apiKey: string, question: string) {
                   type: "object",
                   properties: {
                     text: { type: "string", description: "2-3 sentence scene narration" },
-                    imagePrompt: { type: "string", description: "Highly creative and visually striking illustration prompt. Use specific art styles (isometric 3D, watercolor, flat design, cinematic, infographic, pixel art, paper cut-out, or neon glow). Include dramatic lighting, creative metaphors as visuals, rich color palettes, and clear visual hierarchy. NO TEXT in the image. Example: 'Isometric 3D cutaway of a plant cell showing chloroplasts glowing emerald green, with golden light beams entering through the cell wall, dramatic volumetric lighting, vibrant teal and gold palette'" },
+                    imagePrompt: { type: "string", description: "A LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept, process, or object mentioned in the text. Use clean educational illustration style with labeled-diagram clarity. Realistic or semi-realistic rendering, clear colors, proper scientific/educational accuracy. NO abstract metaphors — show exactly what the text says. NO TEXT or labels in the image. Example: If text says 'The heart pumps blood through arteries', the prompt should be 'Detailed anatomical cross-section of the human heart showing blood flowing from the left ventricle into the aorta, with red oxygenated blood clearly visible, clean medical illustration style, soft lighting, clear anatomy'" },
                   },
                   required: ["text", "imagePrompt"],
                   additionalProperties: false,
@@ -121,12 +121,12 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 }
 
 async function generateWithGemini(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator and visual storyteller. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
+  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Highly creative illustration prompt using specific art styles (isometric 3D, watercolor, cinematic, infographic, neon glow, paper cut-out). Include dramatic lighting, creative visual metaphors, rich colors, clear visual hierarchy. NO TEXT in image."}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
 
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences with analogies and metaphors. Build concepts progressively. fullAnswer must be at least 200 words. imagePrompt MUST be extremely creative and visually striking - use specific art styles, dramatic compositions, visual metaphors, and cinematic lighting to make each scene memorable. Think of each image as a frame from a beautifully animated educational video.
+Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
 
 Question: ${question}`;
 
@@ -155,12 +155,12 @@ Question: ${question}`;
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const prompt = `You are an expert educational content creator and visual storyteller. Given a question, create a thorough, detailed explanation broken into scenes for an animated video, AND a comprehensive written text answer.
+  const prompt = `You are an expert educational content creator. Given a question, create a thorough explanation broken into scenes for an animated video, AND a written text answer.
 
 You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"Highly creative illustration prompt using specific art styles (isometric 3D, watercolor, cinematic, infographic, neon glow, paper cut-out). Include dramatic lighting, creative visual metaphors, rich colors, clear visual hierarchy. NO TEXT in image."}]}
+{"title":"Engaging title","fullAnswer":"Comprehensive 3-5 paragraph explanation (at least 200 words)","scenes":[{"text":"2-3 sentence scene narration","imagePrompt":"LITERAL and ACCURATE illustration of exactly what the scene text describes. Must directly depict the specific concept/process/object from the text. Clean educational illustration style, realistic or semi-realistic, proper scientific accuracy. NO abstract metaphors. NO TEXT in image."}]}
 
-Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences with analogies and metaphors. Build concepts progressively. fullAnswer must be at least 200 words. imagePrompt MUST be extremely creative and visually striking - use specific art styles, dramatic compositions, visual metaphors, and cinematic lighting to make each scene memorable. Think of each image as a frame from a beautifully animated educational video.
+Rules: Create 6-8 scenes. Each scene text should be 2-3 sentences. Build concepts progressively. fullAnswer must be at least 200 words. CRITICAL: Each imagePrompt must LITERALLY and DIRECTLY illustrate what the scene text describes — like a high-quality textbook illustration. If the text mentions a specific process, the image must show that exact process. NO loose metaphors or abstract art.
 
 Question: ${question}`;
 
