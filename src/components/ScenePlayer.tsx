@@ -199,7 +199,7 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       audio.onended = advanceToNext;
-      audio.onerror = () => { cancelSpeechRef.current = speakReliably(text, advanceToNext); };
+      audio.onerror = () => { cancelSpeechRef.current = speakReliably(text, selectedLang, advanceToNext); };
       try { await audio.play(); preloadAudio(sceneIndex + 1); return; } catch {}
     }
 
