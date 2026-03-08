@@ -149,31 +149,10 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Scene visual: single generated image with animated fallback ---
+// --- Scene visual: animated visuals matched to narration text ---
 const SceneVisual = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
-  const imageUrl = scene.imageUrl;
-  const [imgLoaded, setImgLoaded] = useState(false);
-
-  useEffect(() => { setImgLoaded(false); }, [animKey]);
-
-  const kbClass = KEN_BURNS_CLASSES[sceneIndex % KEN_BURNS_CLASSES.length];
-
   return (
-    <div className="w-full h-full relative" key={animKey}>
-      {/* Animated background (visible while image loads or if no image) */}
-      <AnimatedVisual text={scene.text} sceneIndex={sceneIndex} animKey={animKey} />
-
-      {/* Single generated image with Ken Burns */}
-      {imageUrl && (
-        <img
-          src={imageUrl}
-          alt={scene.text}
-          onLoad={() => setImgLoaded(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${kbClass}`}
-          style={{ opacity: imgLoaded ? 1 : 0, zIndex: 2 }}
-        />
-      )}
-    </div>
+    <AnimatedVisual text={scene.text} sceneIndex={sceneIndex} animKey={animKey} />
   );
 };
 
