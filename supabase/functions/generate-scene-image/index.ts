@@ -19,7 +19,7 @@ serve(async (req) => {
     // Try Lovable AI
     if (!imageUrl && LOVABLE_API_KEY) {
       try {
-        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
+        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt, sceneText);
       } catch (e) {
         console.warn("Lovable AI image failed:", e);
       }
