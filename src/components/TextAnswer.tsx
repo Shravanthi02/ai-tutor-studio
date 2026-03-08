@@ -26,19 +26,19 @@ const AnimatedParagraph = ({ text, delay, images }: { text: string; delay: numbe
         {text}
       </p>
       {images && images.length > 0 && (
-        <div className={`mt-3 grid gap-2 ${images.length >= 3 ? "grid-cols-3" : images.length === 2 ? "grid-cols-2" : "grid-cols-1 max-w-md"}`}>
+        <div className="mt-3 space-y-2">
           {images.map((url, i) => (
             <div
               key={i}
               className={`rounded-lg overflow-hidden border border-border transition-all duration-500 ${
                 visible ? "opacity-100 scale-100" : "opacity-0 scale-95"
               }`}
-              style={{ transitionDelay: `${delay + 200 + i * 150}ms` }}
+              style={{ transitionDelay: `${delay + 200 + i * 200}ms` }}
             >
               <img
                 src={url}
                 alt={`Illustration ${i + 1}`}
-                className="w-full h-auto object-cover aspect-video"
+                className="w-full h-auto object-cover"
               />
             </div>
           ))}

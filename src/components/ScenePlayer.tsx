@@ -148,36 +148,49 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Multi-image crossfade layer ---
+// --- Auto-rotating single image display (cycles through scene images) ---
 const SceneImages = ({ scene, animKey, sceneIndex }: { scene: Scene; animKey: number; sceneIndex: number }) => {
   const images = scene.imageUrls?.filter(Boolean) || (scene.imageUrl ? [scene.imageUrl] : []);
-  const kbClass = KEN_BURNS_CLASSES[sceneIndex % KEN_BURNS_CLASSES.length];
+  const [activeImg, setActiveImg] = useState(0);
+
+  // Auto-rotate through images every 4 seconds
+  useEffect(() => {
+    if (images.length <= 1) return;
+    setActiveImg(0);
+    const interval = setInterval(() => {
+      setActiveImg((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [images.length, animKey]);
 
   if (images.length === 0) return <div className="w-full h-full shimmer" />;
 
-  if (images.length === 1) {
-    return (
-      <div className="w-full h-full crossfade-in" key={animKey}>
-        <img src={images[0]} alt={scene.text} className={`w-full h-full object-cover ${kbClass}`} />
-      </div>
-    );
-  }
+  const kbClass = KEN_BURNS_CLASSES[(sceneIndex + activeImg) % KEN_BURNS_CLASSES.length];
 
-  // Multiple images: show as split view
   return (
-    <div className="w-full h-full crossfade-in flex" key={animKey}>
+    <div className="w-full h-full relative" key={animKey}>
       {images.map((url, i) => (
-        <div key={i} className="flex-1 overflow-hidden relative" style={{ animationDelay: `${i * 0.15}s` }}>
-          <img
-            src={url}
-            alt={`${scene.text} - view ${i + 1}`}
-            className={`w-full h-full object-cover ${KEN_BURNS_CLASSES[(sceneIndex + i) % KEN_BURNS_CLASSES.length]}`}
-          />
-          {i < images.length - 1 && (
-            <div className="absolute right-0 top-0 bottom-0 w-px bg-background/30" />
-          )}
-        </div>
+        <img
+          key={i}
+          src={url}
+          alt={`${scene.text} - view ${i + 1}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${kbClass}`}
+          style={{ opacity: i === activeImg ? 1 : 0 }}
+        />
       ))}
+      {/* Image counter dots */}
+      {images.length > 1 && (
+        <div className="absolute top-3 left-3 flex gap-1 z-10">
+          {images.map((_, i) => (
+            <div
+              key={i}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                i === activeImg ? "bg-primary scale-125" : "bg-foreground/40"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
