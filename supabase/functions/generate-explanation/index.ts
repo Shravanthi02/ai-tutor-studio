@@ -107,7 +107,7 @@ serve(async (req) => {
         explanation = await generateWithGroq(GROQ_API_KEY, question);
       } catch (e) {
         console.warn("Groq failed:", e);
-        errors.push(`Groq: ${e}`);
+        errors.push("Groq: " + String(e));
       }
     }
 
