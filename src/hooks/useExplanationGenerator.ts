@@ -43,7 +43,9 @@ async function generateAllImages(
   const tasks: { sceneIdx: number; visualIdx: number; prompt: string }[] = [];
   scenes.forEach((scene, si) => {
     scene.visuals.forEach((prompt, vi) => {
-      tasks.push({ sceneIdx: si, visualIdx: vi, prompt });
+      // Prepend scene narration context so the image directly matches what's being said
+      const contextualPrompt = `Scene context: "${scene.narration || scene.text}". Visualize exactly this: ${prompt}`;
+      tasks.push({ sceneIdx: si, visualIdx: vi, prompt: contextualPrompt });
     });
   });
 

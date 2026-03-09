@@ -25,8 +25,11 @@ CRITICAL: You MUST generate all 8 scenes. Do not generate fewer than 8 scenes.
 
 VISUAL PROMPT RULES:
 - Each scene needs 2-3 image prompts
-- CRITICAL: Every single image prompt across ALL scenes MUST be completely unique and different. Never repeat the same subject, angle, composition, or concept twice. Each visual must show a distinctly different aspect, perspective, or element of the topic.
-- Vary the visual style: mix close-ups, wide shots, cross-sections, diagrams, comparisons, real-world photos, abstract visualizations, and metaphorical imagery across scenes.
+- CRITICAL ALIGNMENT RULE: Each image prompt MUST directly illustrate the SPECIFIC content described in that scene's text and narration. If the narration talks about "mitochondria producing ATP", the image prompt must show mitochondria producing ATP — NOT a generic cell diagram. The visuals must be a direct visual translation of what is being said.
+- DO NOT generate generic, decorative, or loosely related images. Every image must depict the EXACT subject, process, object, or concept mentioned in the scene's narration text.
+- For each visual prompt, start by identifying the key noun/concept from the narration, then describe that specific thing visually.
+- CRITICAL: Every single image prompt across ALL scenes MUST be completely unique and different. Never repeat the same subject, angle, composition, or concept twice.
+- Vary the visual style: mix close-ups, wide shots, cross-sections, diagrams, comparisons, real-world photos, abstract visualizations across scenes.
 - Include cinematic lighting, wide composition, scientific/educational illustration
 - Minimal background clutter, dramatic depth, clear focal subject
 - End each prompt with: "high quality, clean composition, no text no labels no words"
