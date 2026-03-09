@@ -87,6 +87,20 @@ const toolSchema = {
   },
 };
 
+async function retryWithBackoff(fn: () => Promise<any>, retries = 2, baseDelay = 3000): Promise<any> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const isRetryable = String(e).includes("Rate limited") || String(e).includes("429");
+      if (!isRetryable || i === retries) throw e;
+      const delay = baseDelay * Math.pow(2, i);
+      console.log("Rate limited, retrying in " + delay + "ms...");
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -100,38 +114,48 @@ serve(async (req) => {
     let explanation: any;
     const errors: string[] = [];
 
-    if (LOVABLE_API_KEY) {
-      try {
-        explanation = await generateWithLovableAI(LOVABLE_API_KEY, question);
-      } catch (e) {
-        console.warn("Lovable AI failed:", e);
-        errors.push("Lovable: " + String(e));
-      }
-    }
-
-    if (!explanation && GROQ_API_KEY) {
-      try {
-        explanation = await generateWithGroq(GROQ_API_KEY, question);
-      } catch (e) {
-        console.warn("Groq failed:", e);
-        errors.push("Groq: " + String(e));
-      }
-    }
-
+    // Try Gemini first (most reliable for long content)
     if (!explanation && GOOGLE_GEMINI_API_KEY) {
       try {
-        explanation = await generateWithGemini(GOOGLE_GEMINI_API_KEY, question);
+        explanation = await retryWithBackoff(() => generateWithGemini(GOOGLE_GEMINI_API_KEY, question));
       } catch (e) {
         console.warn("Gemini failed:", e);
         errors.push("Gemini: " + String(e));
       }
     }
 
-    if (!explanation) {
-      throw new Error(errors.length ? "All providers failed: " + errors.join("; ") : "No AI API key configured");
+    // Then Lovable AI
+    if (!explanation && LOVABLE_API_KEY) {
+      try {
+        explanation = await retryWithBackoff(() => generateWithLovableAI(LOVABLE_API_KEY, question));
+      } catch (e) {
+        console.warn("Lovable AI failed:", e);
+        errors.push("Lovable: " + String(e));
+      }
     }
 
-    // Normalize the response
+    // Then Groq
+    if (!explanation && GROQ_API_KEY) {
+      try {
+        explanation = await retryWithBackoff(() => generateWithGroq(GROQ_API_KEY, question));
+      } catch (e) {
+        console.warn("Groq failed:", e);
+        errors.push("Groq: " + String(e));
+      }
+    }
+
+    if (!explanation) {
+      const allErrors = errors.join("; ");
+      const userMsg = allErrors.includes("Credits exhausted")
+        ? "AI credits are exhausted. Please try again later or add more credits."
+        : allErrors.includes("Rate limited")
+        ? "Too many requests. Please wait a moment and try again."
+        : errors.length
+        ? "Generation temporarily unavailable. Please try again in a few seconds."
+        : "No AI API key configured";
+      throw new Error(userMsg);
+    }
+
     const normalized = normalizeResponse(explanation);
 
     return new Response(JSON.stringify(normalized), {
@@ -140,7 +164,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("Error:", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
-    const status = msg.includes("Rate limited") ? 429 : 500;
+    const status = msg.includes("credits") || msg.includes("Credits") ? 402 : msg.includes("Rate limited") || msg.includes("wait") ? 429 : 500;
     return new Response(JSON.stringify({ error: msg }), {
       status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -204,7 +228,7 @@ async function generateWithGemini(apiKey: string, question: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: jsonPrompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: "application/json" },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: "application/json" },
       }),
     }
   );
