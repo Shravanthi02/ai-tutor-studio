@@ -22,7 +22,7 @@ Scene 7 — Real-world Applications (optional)
 Scene 8 — Summary: Wrap up clearly
 
 VISUAL PROMPT RULES:
-- Each scene needs 2-3 image prompts
+- Each scene needs exactly 1 image prompt for speed
 - Include cinematic lighting, wide composition, scientific/educational illustration
 - Minimal background clutter, dramatic depth, clear focal subject
 - End each prompt with: "high quality, clean composition, no text no labels no words"
