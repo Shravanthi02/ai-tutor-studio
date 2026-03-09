@@ -228,7 +228,7 @@ async function generateWithGemini(apiKey: string, question: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: jsonPrompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: "application/json" },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 8192, responseMimeType: "application/json" },
       }),
     }
   );
