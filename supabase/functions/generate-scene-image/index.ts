@@ -57,7 +57,7 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Create an accurate, scientifically precise educational visualization that directly depicts: ${prompt}. IMPORTANT: Show exactly what is described, not a generic or loosely related image. Style: National Geographic documentary quality, photorealistic, accurate proportions, precise scientific details, professional educational photography, ultra-detailed, factual representation, high quality, clean composition, no text no labels no words`;
+  const enhancedPrompt = `Create a clear, easy-to-understand educational visualization showing: ${prompt}. CRITICAL: Depict the EXACT subject described - not something related or symbolic. Make it crystal clear what concept is being shown. Style: educational diagram quality, clean simple composition, clear focal point, bright illumination, visible details, scientific accuracy, beginner-friendly illustration, no abstract art, no clutter, no text no labels`;
   const seed = Math.floor(Math.random() * 10000000);
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}&model=flux-pro&enhance=true`;
   
