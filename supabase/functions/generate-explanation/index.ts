@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an AI cinematic explainer video generator. Your task is to convert a user's question into a visually rich animated explainer video structure.
+const SYSTEM_PROMPT = `You are an AI cinematic explainer video generator. Your task is to convert a user's question into a visually rich animated explainer video structure with a VERY DETAILED written explanation.
 
 The output will power: Ken Burns animated images, cinematic scene transitions, text overlays, multiple visuals per scene, browser Text-To-Speech narration, and a detailed written explanation.
 
@@ -37,7 +37,14 @@ NARRATION RULES:
 - Keep it conversational and clear
 
 ANIMATION OPTIONS: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward
-TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal`;
+TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal
+
+WRITTEN EXPLANATION (full_explanation) RULES:
+- CRITICAL: Write a VERY LONG and DETAILED explanation, minimum 600 words, 6-10 paragraphs
+- Cover: definition, history/origin, how it works, real-world examples, analogies, common misconceptions, practical applications, and fun facts
+- Use clear subheadings within the text using markdown (## headers)
+- Make it engaging, educational, and comprehensive enough to serve as a standalone article
+- Include specific numbers, dates, names, and facts where relevant`;
 
 const toolSchema = {
   type: "function" as const,
@@ -48,7 +55,7 @@ const toolSchema = {
       type: "object",
       properties: {
         title: { type: "string", description: "A catchy, curiosity-sparking title (5-10 words)" },
-        full_explanation: { type: "string", description: "Detailed written explanation, 3-5 paragraphs, 250+ words, beginner-friendly with examples and analogies" },
+        full_explanation: { type: "string", description: "Very detailed written explanation, 6-10 paragraphs, 600+ words minimum. Cover the topic thoroughly with real-world examples, analogies, historical context, practical applications, and deeper insights. Make it beginner-friendly but comprehensive." },
         scenes: {
           type: "array",
           minItems: 8,
