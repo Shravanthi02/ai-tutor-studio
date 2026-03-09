@@ -33,11 +33,6 @@ const Index = () => {
             scenes={explanation.scenes}
             title={explanation.title}
           />
-          <AnimatedTextVideo
-            fullAnswer={explanation.fullAnswer || ""}
-            title={explanation.title}
-            scenes={explanation.scenes}
-          />
           <TextAnswer
             title={explanation.title}
             fullAnswer={explanation.fullAnswer || ""}
