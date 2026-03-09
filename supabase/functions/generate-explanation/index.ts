@@ -58,7 +58,9 @@ const toolSchema = {
               visuals: {
                 type: "array",
                 items: { type: "string" },
-                description: "2-3 cinematic image prompts with lighting, composition, style details. End each with: high quality, clean composition, no text no labels no words"
+                description: "Exactly 1 cinematic image prompt with lighting, composition, style details. End with: high quality, clean composition, no text no labels no words",
+                minItems: 1,
+                maxItems: 1
               },
               animation: { type: "string", description: "Camera animation: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward" },
               transition: { type: "string", description: "Transition to next scene: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal" },
