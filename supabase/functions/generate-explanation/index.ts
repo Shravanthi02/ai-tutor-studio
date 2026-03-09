@@ -37,7 +37,7 @@ NARRATION RULES:
 - Keep it conversational and clear
 
 ANIMATION OPTIONS: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward
-TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal
+TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal`;
 
 const toolSchema = {
   type: "function" as const,
