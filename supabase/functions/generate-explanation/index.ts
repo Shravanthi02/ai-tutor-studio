@@ -116,7 +116,7 @@ serve(async (req) => {
         explanation = await generateWithGemini(GOOGLE_GEMINI_API_KEY, question);
       } catch (e) {
         console.warn("Gemini failed:", e);
-        errors.push(`Gemini: ${e}`);
+        errors.push("Gemini: " + String(e));
       }
     }
 
