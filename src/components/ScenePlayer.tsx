@@ -157,7 +157,13 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
     if (imageUrls.length > 1) {
       visualTimerRef.current = setInterval(() => {
-        setCurrentVisualIdx((prev) => (prev + 1) % imageUrls.length);
+        setCurrentVisualIdx((prev) => {
+          if (prev >= imageUrls.length - 1) {
+            if (visualTimerRef.current) clearInterval(visualTimerRef.current);
+            return prev;
+          }
+          return prev + 1;
+        });
       }, 4000);
     }
 
