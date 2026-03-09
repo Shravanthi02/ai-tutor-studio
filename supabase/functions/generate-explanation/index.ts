@@ -168,7 +168,7 @@ async function generateWithLovableAI(apiKey: string, question: string) {
       model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Generate the cinematic animated explainer video structure for: "${question}"` },
+        { role: "user", content: 'Generate the cinematic animated explainer video structure for: "' + question + '"' },
       ],
       tools: [toolSchema],
       tool_choice: { type: "function", function: { name: "create_cinematic_explanation" } },
