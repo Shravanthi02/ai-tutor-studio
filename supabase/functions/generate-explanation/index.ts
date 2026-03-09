@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an AI cinematic explainer video generator. Your task is to convert a user's question into a visually rich animated explainer video structure.
+const SYSTEM_PROMPT = `You are an AI cinematic explainer video generator. Your task is to convert a user's question into a visually rich animated explainer video structure with a VERY DETAILED written explanation.
 
 The output will power: Ken Burns animated images, cinematic scene transitions, text overlays, multiple visuals per scene, browser Text-To-Speech narration, and a detailed written explanation.
 
