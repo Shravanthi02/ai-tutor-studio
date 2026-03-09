@@ -25,6 +25,8 @@ CRITICAL: You MUST generate all 8 scenes. Do not generate fewer than 8 scenes.
 
 VISUAL PROMPT RULES:
 - Each scene needs 2-3 image prompts
+- CRITICAL: Every single image prompt across ALL scenes MUST be completely unique and different. Never repeat the same subject, angle, composition, or concept twice. Each visual must show a distinctly different aspect, perspective, or element of the topic.
+- Vary the visual style: mix close-ups, wide shots, cross-sections, diagrams, comparisons, real-world photos, abstract visualizations, and metaphorical imagery across scenes.
 - Include cinematic lighting, wide composition, scientific/educational illustration
 - Minimal background clutter, dramatic depth, clear focal subject
 - End each prompt with: "high quality, clean composition, no text no labels no words"
@@ -35,7 +37,7 @@ NARRATION RULES:
 - Keep it conversational and clear
 
 ANIMATION OPTIONS: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward
-TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal`;
+TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal
 
 const toolSchema = {
   type: "function" as const,
