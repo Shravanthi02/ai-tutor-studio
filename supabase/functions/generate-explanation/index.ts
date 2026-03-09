@@ -23,16 +23,15 @@ Scene 8 — Summary & Takeaway: Wrap up the concept with a memorable concluding 
 
 CRITICAL: You MUST generate all 8 scenes. Do not generate fewer than 8 scenes.
 
-VISUAL PROMPT RULES:
-- Each scene needs 2-3 image prompts
-- CRITICAL ALIGNMENT RULE: Each image prompt MUST directly illustrate the SPECIFIC content described in that scene's text and narration. If the narration talks about "mitochondria producing ATP", the image prompt must show mitochondria producing ATP — NOT a generic cell diagram. The visuals must be a direct visual translation of what is being said.
-- DO NOT generate generic, decorative, or loosely related images. Every image must depict the EXACT subject, process, object, or concept mentioned in the scene's narration text.
-- For each visual prompt, start by identifying the key noun/concept from the narration, then describe that specific thing visually.
-- CRITICAL: Every single image prompt across ALL scenes MUST be completely unique and different. Never repeat the same subject, angle, composition, or concept twice.
-- Vary the visual style: mix close-ups, wide shots, cross-sections, diagrams, comparisons, real-world photos, abstract visualizations across scenes.
-- Include cinematic lighting, wide composition, scientific/educational illustration
-- Minimal background clutter, dramatic depth, clear focal subject
-- End each prompt with: "high quality, clean composition, no text no labels no words"
+VISUAL PROMPT RULES - CRITICAL FOR UNDERSTANDING:
+- Each scene needs 2-3 image prompts that DIRECTLY illustrate the narration
+- ALIGNMENT RULE: Read the narration first, then create visuals that show EXACTLY what is being described. If narration says "water molecules vibrate faster when heated", show water molecules vibrating. NOT a generic beaker. NOT a thermometer. The EXACT thing being explained.
+- CLARITY RULE: Visuals must help viewers UNDERSTAND the concept. Use clear, simple compositions. Show cause and effect. Use visual metaphors that make abstract concepts concrete.
+- SPECIFICITY: Be extremely specific. Not "a cell" but "a plant cell with visible green chloroplasts absorbing sunlight". Not "energy" but "yellow glowing arrows showing energy transfer from the sun to the leaf".
+- Each visual prompt MUST start with the EXACT subject from the narration, then add visual details.
+- Include: clear lighting, educational diagram style, labeled-looking (but no actual text), step-by-step process visualization where applicable
+- Make complex processes visible: use cutaway views, magnification, slow-motion effect descriptions, before/after comparisons
+- End each prompt with: "educational illustration, crystal clear, highly detailed, easy to understand, no text no labels"
 
 NARRATION RULES:
 - Write natural spoken versions of the text
