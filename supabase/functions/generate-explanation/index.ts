@@ -11,15 +11,17 @@ The output will power: Ken Burns animated images, cinematic scene transitions, t
 
 VIDEO STYLE: Modern educational documentary with dark slate background, amber gold accents, minimal modern UI, cinematic lighting, clean educational illustration style, high clarity visuals.
 
-STORYTELLING FLOW:
-Scene 1 — Curiosity Hook: Introduce the question in an intriguing way
-Scene 2 — Simple Explanation: Explain using simple language
-Scene 3 — Visual Demonstration: Show what it looks like visually
-Scene 4 — How It Works: Explain the mechanism
-Scene 5 — Analogy: Use a real-world comparison
-Scene 6 — Deeper Insight: Introduce slightly advanced ideas
-Scene 7 — Real-world Applications (optional)
-Scene 8 — Summary: Wrap up clearly
+STORYTELLING FLOW - GENERATE EXACTLY 8 SCENES:
+Scene 1 — Curiosity Hook: Introduce the question in an intriguing, surprising way to grab attention
+Scene 2 — Simple Explanation: Break down the concept using simple, everyday language
+Scene 3 — Visual Demonstration: Show what the concept looks like visually in action
+Scene 4 — How It Works: Explain the underlying mechanism or cause-and-effect
+Scene 5 — Analogy: Use a relatable real-world comparison to deepen understanding
+Scene 6 — Deeper Insight: Introduce slightly more advanced ideas and connections
+Scene 7 — Real-world Applications: Show practical uses, examples, or impact in the real world
+Scene 8 — Summary & Takeaway: Wrap up the concept with a memorable concluding thought
+
+CRITICAL: You MUST generate all 8 scenes. Do not generate fewer than 8 scenes.
 
 VISUAL PROMPT RULES:
 - Each scene needs 2-3 image prompts
