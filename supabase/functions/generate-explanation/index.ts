@@ -146,7 +146,7 @@ function normalizeResponse(data: any) {
     fullAnswer: data.full_explanation || data.fullAnswer || "",
     scenes: (data.scenes || []).map((s: any, i: number) => ({
       scene_number: s.scene_number || i + 1,
-      title: s.title || `Scene ${i + 1}`,
+      title: s.title || "Scene " + (i + 1),
       hook: s.hook || "",
       text: s.text || "",
       narration: s.narration || s.text || "",
