@@ -121,7 +121,7 @@ serve(async (req) => {
     }
 
     if (!explanation) {
-      throw new Error(errors.length ? `All providers failed: ${errors.join("; ")}` : "No AI API key configured");
+      throw new Error(errors.length ? "All providers failed: " + errors.join("; ") : "No AI API key configured");
     }
 
     // Normalize the response
