@@ -25,6 +25,8 @@ CRITICAL: You MUST generate all 8 scenes. Do not generate fewer than 8 scenes.
 
 VISUAL PROMPT RULES:
 - Each scene needs 2-3 image prompts
+- CRITICAL: Every single image prompt across ALL scenes MUST be completely unique and different. Never repeat the same subject, angle, composition, or concept twice. Each visual must show a distinctly different aspect, perspective, or element of the topic.
+- Vary the visual style: mix close-ups, wide shots, cross-sections, diagrams, comparisons, real-world photos, abstract visualizations, and metaphorical imagery across scenes.
 - Include cinematic lighting, wide composition, scientific/educational illustration
 - Minimal background clutter, dramatic depth, clear focal subject
 - End each prompt with: "high quality, clean composition, no text no labels no words"
@@ -96,7 +98,7 @@ serve(async (req) => {
         explanation = await generateWithLovableAI(LOVABLE_API_KEY, question);
       } catch (e) {
         console.warn("Lovable AI failed:", e);
-        errors.push(`Lovable: ${e}`);
+        errors.push("Lovable: " + String(e));
       }
     }
 
@@ -105,7 +107,7 @@ serve(async (req) => {
         explanation = await generateWithGroq(GROQ_API_KEY, question);
       } catch (e) {
         console.warn("Groq failed:", e);
-        errors.push(`Groq: ${e}`);
+        errors.push("Groq: " + String(e));
       }
     }
 
@@ -114,12 +116,12 @@ serve(async (req) => {
         explanation = await generateWithGemini(GOOGLE_GEMINI_API_KEY, question);
       } catch (e) {
         console.warn("Gemini failed:", e);
-        errors.push(`Gemini: ${e}`);
+        errors.push("Gemini: " + String(e));
       }
     }
 
     if (!explanation) {
-      throw new Error(errors.length ? `All providers failed: ${errors.join("; ")}` : "No AI API key configured");
+      throw new Error(errors.length ? "All providers failed: " + errors.join("; ") : "No AI API key configured");
     }
 
     // Normalize the response
@@ -144,7 +146,7 @@ function normalizeResponse(data: any) {
     fullAnswer: data.full_explanation || data.fullAnswer || "",
     scenes: (data.scenes || []).map((s: any, i: number) => ({
       scene_number: s.scene_number || i + 1,
-      title: s.title || `Scene ${i + 1}`,
+      title: s.title || "Scene " + (i + 1),
       hook: s.hook || "",
       text: s.text || "",
       narration: s.narration || s.text || "",
@@ -159,14 +161,14 @@ async function generateWithLovableAI(apiKey: string, question: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: "Bearer " + apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Generate the cinematic animated explainer video structure for: "${question}"` },
+        { role: "user", content: 'Generate the cinematic animated explainer video structure for: "' + question + '"' },
       ],
       tools: [toolSchema],
       tool_choice: { type: "function", function: { name: "create_cinematic_explanation" } },
@@ -186,15 +188,10 @@ async function generateWithLovableAI(apiKey: string, question: string) {
 }
 
 async function generateWithGemini(apiKey: string, question: string) {
-  const jsonPrompt = `${SYSTEM_PROMPT}
-
-Generate the cinematic animated explainer video structure for: "${question}"
-
-You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}`;
+  const jsonPrompt = SYSTEM_PROMPT + '\n\nGenerate the cinematic animated explainer video structure for: "' + question + '"\n\nYou MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:\n{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}';
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -218,17 +215,12 @@ You MUST respond with valid JSON only, no markdown, no code fences. Use this exa
 }
 
 async function generateWithGroq(apiKey: string, question: string) {
-  const jsonPrompt = `${SYSTEM_PROMPT}
-
-Generate the cinematic animated explainer video structure for: "${question}"
-
-You MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:
-{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}`;
+  const jsonPrompt = SYSTEM_PROMPT + '\n\nGenerate the cinematic animated explainer video structure for: "' + question + '"\n\nYou MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:\n{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}';
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: "Bearer " + apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
