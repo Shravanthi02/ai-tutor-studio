@@ -49,6 +49,7 @@ const toolSchema = {
         full_explanation: { type: "string", description: "Detailed written explanation, 3-5 paragraphs, 250+ words, beginner-friendly with examples and analogies" },
         scenes: {
           type: "array",
+          minItems: 8,
           items: {
             type: "object",
             properties: {
@@ -59,6 +60,7 @@ const toolSchema = {
               narration: { type: "string", description: "Natural spoken version for TTS" },
               visuals: {
                 type: "array",
+                minItems: 2,
                 items: { type: "string" },
                 description: "2-3 cinematic image prompts with lighting, composition, style details. End each with: high quality, clean composition, no text no labels no words"
               },
