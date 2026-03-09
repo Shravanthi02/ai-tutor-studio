@@ -191,7 +191,7 @@ async function generateWithGemini(apiKey: string, question: string) {
   const jsonPrompt = SYSTEM_PROMPT + '\n\nGenerate the cinematic animated explainer video structure for: "' + question + '"\n\nYou MUST respond with valid JSON only, no markdown, no code fences. Use this exact structure:\n{"title":"","full_explanation":"","scenes":[{"scene_number":1,"title":"","hook":"","text":"","narration":"","visuals":["prompt1","prompt2","prompt3"],"animation":"slow zoom in","transition":"fade"}]}';
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + apiKey,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
