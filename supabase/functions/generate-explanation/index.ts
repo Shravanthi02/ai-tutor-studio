@@ -98,7 +98,7 @@ serve(async (req) => {
         explanation = await generateWithLovableAI(LOVABLE_API_KEY, question);
       } catch (e) {
         console.warn("Lovable AI failed:", e);
-        errors.push(`Lovable: ${e}`);
+        errors.push("Lovable: " + String(e));
       }
     }
 
