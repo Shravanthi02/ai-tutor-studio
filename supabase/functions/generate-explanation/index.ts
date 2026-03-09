@@ -37,7 +37,14 @@ NARRATION RULES:
 - Keep it conversational and clear
 
 ANIMATION OPTIONS: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward
-TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal`;
+TRANSITION OPTIONS: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal
+
+WRITTEN EXPLANATION (full_explanation) RULES:
+- CRITICAL: Write a VERY LONG and DETAILED explanation, minimum 600 words, 6-10 paragraphs
+- Cover: definition, history/origin, how it works, real-world examples, analogies, common misconceptions, practical applications, and fun facts
+- Use clear subheadings within the text using markdown (## headers)
+- Make it engaging, educational, and comprehensive enough to serve as a standalone article
+- Include specific numbers, dates, names, and facts where relevant`;
 
 const toolSchema = {
   type: "function" as const,
