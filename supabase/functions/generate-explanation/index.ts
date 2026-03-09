@@ -220,7 +220,7 @@ async function generateWithGroq(apiKey: string, question: string) {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: "Bearer " + apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
