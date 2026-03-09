@@ -14,14 +14,15 @@ VIDEO STYLE: Modern educational documentary with dark slate background, amber go
 STORYTELLING FLOW:
 Scene 1 — Curiosity Hook: Introduce the question in an intriguing way
 Scene 2 — Simple Explanation: Explain using simple language
-Scene 3 — How It Works: Explain the mechanism
-Scene 4 — Analogy: Use a real-world comparison
-Scene 5 — Summary: Wrap up clearly
+Scene 3 — Visual Demonstration: Show what it looks like visually
+Scene 4 — How It Works: Explain the mechanism
+Scene 5 — Analogy: Use a real-world comparison
+Scene 6 — Deeper Insight: Introduce slightly advanced ideas
+Scene 7 — Real-world Applications (optional)
+Scene 8 — Summary: Wrap up clearly
 
 VISUAL PROMPT RULES:
-- Each scene needs exactly 1 image prompt
-- Include cinematic lighting, wide composition, scientific/educational illustration
-- End each prompt with: "high quality, clean composition, no text no labels no words"
+- Each scene needs 2-3 image prompts
 - Include cinematic lighting, wide composition, scientific/educational illustration
 - Minimal background clutter, dramatic depth, clear focal subject
 - End each prompt with: "high quality, clean composition, no text no labels no words"
@@ -57,9 +58,7 @@ const toolSchema = {
               visuals: {
                 type: "array",
                 items: { type: "string" },
-                description: "Exactly 1 cinematic image prompt with lighting, composition, style details. End with: high quality, clean composition, no text no labels no words",
-                minItems: 1,
-                maxItems: 1
+                description: "2-3 cinematic image prompts with lighting, composition, style details. End each with: high quality, clean composition, no text no labels no words"
               },
               animation: { type: "string", description: "Camera animation: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward" },
               transition: { type: "string", description: "Transition to next scene: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal" },
