@@ -44,7 +44,7 @@ const toolSchema = {
       type: "object",
       properties: {
         title: { type: "string", description: "A catchy, curiosity-sparking title (5-10 words)" },
-        full_explanation: { type: "string", description: "Comprehensive written explanation, 5-7 paragraphs, 500+ words, beginner-friendly with detailed examples, real-world applications, and multiple analogies" },
+        full_explanation: { type: "string", description: "Detailed written explanation, 3-5 paragraphs, 250+ words, beginner-friendly with examples and analogies" },
         scenes: {
           type: "array",
           items: {
