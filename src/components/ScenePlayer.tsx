@@ -105,12 +105,18 @@ const MultiVisualLayer = ({
 }) => {
   const currentUrl = imageUrls[currentVisualIndex];
   const [loaded, setLoaded] = useState(false);
+  const [animReady, setAnimReady] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
+    setAnimReady(false);
     if (!currentUrl) return;
     const img = new Image();
-    img.onload = () => setLoaded(true);
+    img.onload = () => {
+      setLoaded(true);
+      // Small delay to ensure opacity transition starts, then apply animation
+      requestAnimationFrame(() => setAnimReady(true));
+    };
     img.onerror = () => setLoaded(false);
     img.src = currentUrl;
   }, [currentUrl]);
@@ -118,12 +124,12 @@ const MultiVisualLayer = ({
   if (!currentUrl) return <div className="w-full h-full shimmer" />;
 
   return (
-    <div className={`w-full h-full ${transitionClass}`} key={`${currentVisualIndex}-${currentUrl.slice(-20)}`}>
+    <div className={`w-full h-full ${loaded ? transitionClass : ""}`} key={`${currentVisualIndex}-${currentUrl.slice(-20)}`}>
       {!loaded && <div className="absolute inset-0 shimmer" />}
       <img
         src={currentUrl}
         alt=""
-        className={`w-full h-full object-cover ${animationClass} transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"} ${animReady ? animationClass : ""}`}
       />
     </div>
   );
