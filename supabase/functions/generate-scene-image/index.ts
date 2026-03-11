@@ -57,26 +57,36 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Create a clear, easy-to-understand educational visualization showing: ${prompt}. CRITICAL: Depict the EXACT subject described - not something related or symbolic. Make it crystal clear what concept is being shown. Style: educational diagram quality, clean simple composition, clear focal point, bright illumination, visible details, scientific accuracy, beginner-friendly illustration, no abstract art, no clutter, no text no labels`;
+  const enhancedPrompt = `Create a clear, easy-to-understand educational visualization showing: ${prompt}. CRITICAL: Depict the EXACT subject described. Style: educational diagram, clean composition, bright, detailed, no text no labels`;
   const seed = Math.floor(Math.random() * 10000000);
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}&model=flux-pro&enhance=true`;
   
-  // Verify the URL works by making a HEAD request
-  const response = await fetch(url, { method: "GET", redirect: "follow" });
-  if (!response.ok) {
-    await response.text();
-    throw new Error(`Pollinations error: ${response.status}`);
-  }
+  // Try multiple models in order
+  const models = ["flux", "flux-realism", "turbo"];
   
-  // Convert to base64 to avoid CORS issues in the client
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  for (const model of models) {
+    try {
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}&model=${model}`;
+      const response = await fetch(url, { method: "GET", redirect: "follow" });
+      if (!response.ok) {
+        await response.text();
+        continue;
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      if (arrayBuffer.byteLength < 1000) continue; // Too small, likely an error
+      
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (e) {
+      console.warn(`Pollinations model ${model} failed:`, e);
+    }
   }
-  const base64 = btoa(binary);
-  return `data:image/jpeg;base64,${base64}`;
+  throw new Error("All Pollinations models failed");
 }
 
 async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
