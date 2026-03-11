@@ -5,10 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -20,20 +16,16 @@ serve(async (req) => {
 
     let imageUrl: string | null = null;
 
-    // Try Lovable AI first (with retry on rate limit)
-    if (LOVABLE_API_KEY) {
-      for (let attempt = 0; attempt < 3 && !imageUrl; attempt++) {
-        try {
-          if (attempt > 0) await delay(2000 * attempt);
-          imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
-        } catch (e: any) {
-          console.warn(`Lovable AI attempt ${attempt + 1} failed:`, e.message);
-          if (!e.message?.includes("429") || attempt === 2) break;
-        }
+    // Try Lovable AI
+    if (!imageUrl && LOVABLE_API_KEY) {
+      try {
+        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
+      } catch (e) {
+        console.warn("Lovable AI image failed:", e);
       }
     }
 
-    // Try Gemini direct API
+    // Try Gemini
     if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
       try {
         imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt);
@@ -42,10 +34,10 @@ serve(async (req) => {
       }
     }
 
-    // Fallback: Pollinations.ai (return URL directly, no download)
+    // Fallback: Pollinations.ai (free, no API key needed)
     if (!imageUrl) {
       try {
-        imageUrl = generatePollinationsUrl(prompt);
+        imageUrl = await generateWithPollinations(prompt);
       } catch (e) {
         console.warn("Pollinations failed:", e);
       }
@@ -64,13 +56,27 @@ serve(async (req) => {
   }
 });
 
-// Pollinations: just return the URL directly - the browser will load it
-function generatePollinationsUrl(prompt: string): string {
-  // Keep prompt short to avoid 500 errors
-  const shortPrompt = prompt.slice(0, 200);
-  const enhancedPrompt = `Educational diagram: ${shortPrompt}, clean, bright, simple`;
+async function generateWithPollinations(prompt: string): Promise<string> {
+  const enhancedPrompt = `Create a clear, easy-to-understand educational visualization showing: ${prompt}. CRITICAL: Depict the EXACT subject described - not something related or symbolic. Make it crystal clear what concept is being shown. Style: educational diagram quality, clean simple composition, clear focal point, bright illumination, visible details, scientific accuracy, beginner-friendly illustration, no abstract art, no clutter, no text no labels`;
   const seed = Math.floor(Math.random() * 10000000);
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}`;
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}&model=flux-pro&enhance=true`;
+  
+  // Verify the URL works by making a HEAD request
+  const response = await fetch(url, { method: "GET", redirect: "follow" });
+  if (!response.ok) {
+    await response.text();
+    throw new Error(`Pollinations error: ${response.status}`);
+  }
+  
+  // Convert to base64 to avoid CORS issues in the client
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = btoa(binary);
+  return `data:image/jpeg;base64,${base64}`;
 }
 
 async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
@@ -81,8 +87,8 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: `Generate an educational illustration: ${prompt.slice(0, 300)}` }],
+      model: "google/gemini-2.5-flash-image",
+      messages: [{ role: "user", content: prompt }],
       modalities: ["image", "text"],
     }),
   });
@@ -111,6 +117,12 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
     return message.content;
   }
 
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const inlinePart = parts.find((p: any) => p.inlineData);
+  if (inlinePart?.inlineData) {
+    return `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
+  }
+
   throw new Error("No image in response");
 }
 
@@ -121,7 +133,7 @@ async function generateWithGemini(apiKey: string, prompt: string): Promise<strin
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: `Generate an educational illustration image: ${prompt.slice(0, 300)}` }] }],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     }

@@ -105,38 +105,25 @@ const MultiVisualLayer = ({
 }) => {
   const currentUrl = imageUrls[currentVisualIndex];
   const [loaded, setLoaded] = useState(false);
-  const [animReady, setAnimReady] = useState(false);
-  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
-    setAnimReady(false);
-    setError(false);
+    if (!currentUrl) return;
+    const img = new Image();
+    img.onload = () => setLoaded(true);
+    img.onerror = () => setLoaded(false);
+    img.src = currentUrl;
   }, [currentUrl]);
 
   if (!currentUrl) return <div className="w-full h-full shimmer" />;
 
   return (
-    <div className={`w-full h-full ${loaded ? transitionClass : ""}`}>
-      {!loaded && !error && <div className="absolute inset-0 shimmer" />}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-muted/30">
-          <span className="text-muted-foreground text-sm">Image unavailable</span>
-        </div>
-      )}
+    <div className={`w-full h-full ${transitionClass}`} key={`${currentVisualIndex}-${currentUrl.slice(-20)}`}>
+      {!loaded && <div className="absolute inset-0 shimmer" />}
       <img
         src={currentUrl}
         alt=""
-        crossOrigin="anonymous"
-        onLoad={() => {
-          setLoaded(true);
-          requestAnimationFrame(() => setAnimReady(true));
-        }}
-        onError={() => {
-          setError(true);
-          setLoaded(false);
-        }}
-        className={`w-full h-full object-cover transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"} ${animReady ? animationClass : ""}`}
+        className={`w-full h-full object-cover ${animationClass} transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );
