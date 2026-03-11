@@ -5,6 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -16,12 +20,16 @@ serve(async (req) => {
 
     let imageUrl: string | null = null;
 
-    // Try Lovable AI first
-    if (!imageUrl && LOVABLE_API_KEY) {
-      try {
-        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
-      } catch (e) {
-        console.warn("Lovable AI image failed:", e);
+    // Try Lovable AI first (with retry on rate limit)
+    if (LOVABLE_API_KEY) {
+      for (let attempt = 0; attempt < 3 && !imageUrl; attempt++) {
+        try {
+          if (attempt > 0) await delay(2000 * attempt);
+          imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
+        } catch (e: any) {
+          console.warn(`Lovable AI attempt ${attempt + 1} failed:`, e.message);
+          if (!e.message?.includes("429") || attempt === 2) break;
+        }
       }
     }
 
@@ -34,10 +42,10 @@ serve(async (req) => {
       }
     }
 
-    // Fallback: Pollinations.ai (free, no API key needed)
+    // Fallback: Pollinations.ai (return URL directly, no download)
     if (!imageUrl) {
       try {
-        imageUrl = await generateWithPollinations(prompt);
+        imageUrl = generatePollinationsUrl(prompt);
       } catch (e) {
         console.warn("Pollinations failed:", e);
       }
@@ -56,45 +64,13 @@ serve(async (req) => {
   }
 });
 
-async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Educational visualization: ${prompt}. Style: clean diagram, bright, detailed, no text`;
+// Pollinations: just return the URL directly - the browser will load it
+function generatePollinationsUrl(prompt: string): string {
+  // Keep prompt short to avoid 500 errors
+  const shortPrompt = prompt.slice(0, 200);
+  const enhancedPrompt = `Educational diagram: ${shortPrompt}, clean, bright, simple`;
   const seed = Math.floor(Math.random() * 10000000);
-  
-  // Use the simple URL approach - Pollinations returns the image directly
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}`;
-  
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-  
-  try {
-    const response = await fetch(url, { 
-      method: "GET", 
-      redirect: "follow",
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    
-    if (!response.ok) {
-      await response.text();
-      throw new Error(`Pollinations error: ${response.status}`);
-    }
-    
-    const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength < 1000) throw new Error("Response too small");
-    
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = "";
-    const chunkSize = 8192;
-    for (let i = 0; i < bytes.byteLength; i += chunkSize) {
-      const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.byteLength));
-      binary += String.fromCharCode(...chunk);
-    }
-    const base64 = btoa(binary);
-    return `data:image/jpeg;base64,${base64}`;
-  } catch (e) {
-    clearTimeout(timeout);
-    throw e;
-  }
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}`;
 }
 
 async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
@@ -106,7 +82,7 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
     },
     body: JSON.stringify({
       model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: `Generate an educational illustration: ${prompt}` }],
+      messages: [{ role: "user", content: `Generate an educational illustration: ${prompt.slice(0, 300)}` }],
       modalities: ["image", "text"],
     }),
   });
@@ -140,12 +116,12 @@ async function generateWithLovableAI(apiKey: string, prompt: string): Promise<st
 
 async function generateWithGemini(apiKey: string, prompt: string): Promise<string> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: `Generate an educational illustration image: ${prompt}` }] }],
+        contents: [{ role: "user", parts: [{ text: `Generate an educational illustration image: ${prompt.slice(0, 300)}` }] }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     }
