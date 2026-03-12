@@ -141,22 +141,22 @@
   }
 }
 
-/* Ken Burns directional variants */
+/* Ken Burns directional variants — more dramatic for visibility */
 @keyframes kenBurns1 {
   0% { transform: scale(1) translate(0, 0); }
-  100% { transform: scale(1.18) translate(-2%, -1.5%); }
+  100% { transform: scale(1.35) translate(-3%, -2%); }
 }
 @keyframes kenBurns2 {
-  0% { transform: scale(1.05) translate(-1%, 0); }
-  100% { transform: scale(1.2) translate(1.5%, -2%); }
+  0% { transform: scale(1.05) translate(-2%, 0); }
+  100% { transform: scale(1.35) translate(2%, -3%); }
 }
 @keyframes kenBurns3 {
-  0% { transform: scale(1) translate(1%, 1%); }
-  100% { transform: scale(1.15) translate(-1%, 1.5%); }
+  0% { transform: scale(1) translate(2%, 1%); }
+  100% { transform: scale(1.3) translate(-3%, 2%); }
 }
 @keyframes kenBurns4 {
-  0% { transform: scale(1.1) translate(0, -1%); }
-  100% { transform: scale(1) translate(1%, 0.5%); }
+  0% { transform: scale(1.25) translate(0, -2%); }
+  100% { transform: scale(1) translate(2%, 1%); }
 }
 
 /* Crossfade transitions */
