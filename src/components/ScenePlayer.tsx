@@ -105,12 +105,20 @@ const MultiVisualLayer = ({
 }) => {
   const currentUrl = imageUrls[currentVisualIndex];
   const [loaded, setLoaded] = useState(false);
+  const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
+    setAnimating(false);
     if (!currentUrl) return;
     const img = new Image();
-    img.onload = () => setLoaded(true);
+    img.onload = () => {
+      setLoaded(true);
+      // Trigger animation after image is loaded and rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setAnimating(true));
+      });
+    };
     img.onerror = () => setLoaded(false);
     img.src = currentUrl;
   }, [currentUrl]);
@@ -123,7 +131,7 @@ const MultiVisualLayer = ({
       <img
         src={currentUrl}
         alt=""
-        className={`w-full h-full object-cover ${animationClass} transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover ${animating ? animationClass : ""} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );
