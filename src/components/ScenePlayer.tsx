@@ -92,6 +92,13 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
 };
 
 // --- Multi-visual crossfade layer ---
+const KENBURNS_STYLES: Record<string, React.CSSProperties> = {
+  "ken-burns-1": { animation: "kenBurns1 10s ease-in-out forwards" },
+  "ken-burns-2": { animation: "kenBurns2 10s ease-in-out forwards" },
+  "ken-burns-3": { animation: "kenBurns3 10s ease-in-out forwards" },
+  "ken-burns-4": { animation: "kenBurns4 10s ease-in-out forwards" },
+};
+
 const MultiVisualLayer = ({
   imageUrls,
   currentVisualIndex,
@@ -105,25 +112,19 @@ const MultiVisualLayer = ({
 }) => {
   const currentUrl = imageUrls[currentVisualIndex];
   const [loaded, setLoaded] = useState(false);
-  const [animating, setAnimating] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
-    setAnimating(false);
     if (!currentUrl) return;
     const img = new Image();
-    img.onload = () => {
-      setLoaded(true);
-      // Trigger animation after image is loaded and rendered
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setAnimating(true));
-      });
-    };
+    img.onload = () => setLoaded(true);
     img.onerror = () => setLoaded(false);
     img.src = currentUrl;
   }, [currentUrl]);
 
   if (!currentUrl) return <div className="w-full h-full shimmer" />;
+
+  const kbStyle = loaded ? (KENBURNS_STYLES[animationClass] || KENBURNS_STYLES["ken-burns-1"]) : {};
 
   return (
     <div className={`w-full h-full ${transitionClass}`} key={`${currentVisualIndex}-${currentUrl.slice(-20)}`}>
@@ -131,7 +132,8 @@ const MultiVisualLayer = ({
       <img
         src={currentUrl}
         alt=""
-        className={`w-full h-full object-cover ${animating ? animationClass : ""} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        style={kbStyle}
+        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );
