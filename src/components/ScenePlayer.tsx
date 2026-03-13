@@ -268,6 +268,7 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
         {/* Multi-visual layer */}
         <div className="absolute inset-0 overflow-hidden">
           <MultiVisualLayer
+            key={`visual-${currentIndex}-${currentVisualIdx}-${animClass}`}
             imageUrls={imageUrls}
             currentVisualIndex={currentVisualIdx}
             animationClass={animClass}
