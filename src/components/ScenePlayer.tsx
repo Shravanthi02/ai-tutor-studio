@@ -124,12 +124,20 @@ const MultiVisualLayer = ({
 
   if (!currentUrl) return <div className="w-full h-full shimmer" />;
 
-  const kbStyle = loaded ? (KENBURNS_STYLES[animationClass] || KENBURNS_STYLES["ken-burns-1"]) : {};
+  const animationDuration = imageUrls.length > 1 ? "3.8s" : "10s";
+  const kbStyle = loaded
+    ? ({
+        ...(KENBURNS_STYLES[animationClass] || KENBURNS_STYLES["ken-burns-1"]),
+        animationDuration,
+        willChange: "transform",
+      } as React.CSSProperties)
+    : {};
 
   return (
-    <div className={`w-full h-full ${transitionClass}`} key={`${currentVisualIndex}-${currentUrl.slice(-20)}`}>
+    <div className={`w-full h-full ${transitionClass}`}>
       {!loaded && <div className="absolute inset-0 shimmer" />}
       <img
+        key={`${currentVisualIndex}-${currentUrl}-${animationClass}`}
         src={currentUrl}
         alt=""
         style={kbStyle}
