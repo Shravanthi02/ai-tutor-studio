@@ -12,7 +12,6 @@ serve(async (req) => {
     const { prompt } = await req.json();
     if (!prompt) throw new Error("Missing prompt");
 
-    // Use Pollinations.ai (free, reliable, no API key needed)
     const imageUrl = await generateWithPollinations(prompt);
 
     return new Response(JSON.stringify({ imageUrl }), {
@@ -27,11 +26,41 @@ serve(async (req) => {
 });
 
 async function generateWithPollinations(prompt: string): Promise<string> {
-  const enhancedPrompt = `Create a clear, easy-to-understand educational visualization showing: ${prompt}. CRITICAL: Depict the EXACT subject described - not something related or symbolic. Make it crystal clear what concept is being shown. Style: educational diagram quality, clean simple composition, clear focal point, bright illumination, visible details, scientific accuracy, beginner-friendly illustration, no abstract art, no clutter, no text no labels`;
+  const enhancedPrompt = `Educational visualization: ${prompt}. Style: clean, simple, scientific accuracy, no text, no labels`;
   const seed = Math.floor(Math.random() * 10000000);
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}&model=flux-pro&enhance=true`;
 
-  // Return the URL directly - let the client load it
-  // This avoids base64 conversion which can cause memory/timeout issues
-  return url;
+  // Download the image with a 25s timeout to convert to base64
+  // This avoids client-side CORS/loading issues with Pollinations on-the-fly generation
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25000);
+
+  try {
+    const response = await fetch(url, { method: "GET", redirect: "follow", signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      await response.text();
+      throw new Error(`Pollinations error: ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    // Use chunked base64 encoding to avoid stack overflow on large images
+    const CHUNK_SIZE = 32768;
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i += CHUNK_SIZE) {
+      const chunk = bytes.subarray(i, Math.min(i + CHUNK_SIZE, bytes.byteLength));
+      binary += String.fromCharCode(...chunk);
+    }
+    const base64 = btoa(binary);
+    return `data:image/jpeg;base64,${base64}`;
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e instanceof DOMException && e.name === "AbortError") {
+      throw new Error("Image generation timed out");
+    }
+    throw e;
+  }
 }
