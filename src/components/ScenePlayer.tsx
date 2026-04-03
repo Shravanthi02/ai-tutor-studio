@@ -116,10 +116,28 @@ const MultiVisualLayer = ({
   useEffect(() => {
     setLoaded(false);
     if (!currentUrl) return;
-    const img = new Image();
-    img.onload = () => setLoaded(true);
-    img.onerror = () => setLoaded(false);
-    img.src = currentUrl;
+    let cancelled = false;
+    let attempt = 0;
+    const maxRetries = 3;
+
+    const tryLoad = () => {
+      if (cancelled) return;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => { if (!cancelled) setLoaded(true); };
+      img.onerror = () => {
+        if (cancelled) return;
+        attempt++;
+        if (attempt < maxRetries) {
+          setTimeout(tryLoad, 2000 * attempt);
+        }
+      };
+      // Add cache-bust on retries to force fresh request
+      img.src = attempt === 0 ? currentUrl : `${currentUrl}&_r=${attempt}`;
+    };
+    tryLoad();
+
+    return () => { cancelled = true; };
   }, [currentUrl]);
 
   if (!currentUrl) return <div className="w-full h-full shimmer" />;
