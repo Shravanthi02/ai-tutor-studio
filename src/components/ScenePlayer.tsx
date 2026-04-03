@@ -249,15 +249,6 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     return () => stopAll();
   }, [isPlaying, currentIndex]);
 
-  // Preload all images on mount
-  useEffect(() => {
-    scenes.forEach((s) => {
-      s.imageUrls?.forEach((url) => {
-        if (url) { const img = new Image(); img.src = url; }
-      });
-      if (s.imageUrl) { const img = new Image(); img.src = s.imageUrl; }
-    });
-  }, [scenes]);
 
   // Auto-play on mount
   useEffect(() => {
