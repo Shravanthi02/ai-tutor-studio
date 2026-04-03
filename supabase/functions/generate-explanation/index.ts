@@ -24,11 +24,11 @@ Scene 8 — Summary & Takeaway: Wrap up the concept with a memorable concluding 
 CRITICAL: You MUST generate all 8 scenes. Do not generate fewer than 8 scenes.
 
 VISUAL PROMPT RULES - CRITICAL FOR UNDERSTANDING:
-- Each scene needs 2-3 image prompts that DIRECTLY illustrate the narration
-- ALIGNMENT RULE: Read the narration first, then create visuals that show EXACTLY what is being described. If narration says "water molecules vibrate faster when heated", show water molecules vibrating. NOT a generic beaker. NOT a thermometer. The EXACT thing being explained.
+- Each scene needs EXACTLY 1 image prompt that DIRECTLY illustrates the narration
+- ALIGNMENT RULE: Read the narration first, then create a visual that shows EXACTLY what is being described. If narration says "water molecules vibrate faster when heated", show water molecules vibrating. NOT a generic beaker. NOT a thermometer. The EXACT thing being explained.
 - CLARITY RULE: Visuals must help viewers UNDERSTAND the concept. Use clear, simple compositions. Show cause and effect. Use visual metaphors that make abstract concepts concrete.
 - SPECIFICITY: Be extremely specific. Not "a cell" but "a plant cell with visible green chloroplasts absorbing sunlight". Not "energy" but "yellow glowing arrows showing energy transfer from the sun to the leaf".
-- Each visual prompt MUST start with the EXACT subject from the narration, then add visual details.
+- The single visual prompt MUST start with the EXACT subject from the narration, then add visual details.
 - Include: clear lighting, educational diagram style, labeled-looking (but no actual text), step-by-step process visualization where applicable
 - Make complex processes visible: use cutaway views, magnification, slow-motion effect descriptions, before/after comparisons
 - End each prompt with: "educational illustration, crystal clear, highly detailed, easy to understand, no text no labels"
@@ -71,9 +71,10 @@ const toolSchema = {
               narration: { type: "string", description: "Natural spoken version for TTS" },
               visuals: {
                 type: "array",
-                minItems: 2,
+                minItems: 1,
+                maxItems: 1,
                 items: { type: "string" },
-                description: "2-3 cinematic image prompts with lighting, composition, style details. End each with: high quality, clean composition, no text no labels no words"
+                description: "Exactly 1 cinematic image prompt with lighting, composition, style details. End with: high quality, clean composition, no text no labels no words"
               },
               animation: { type: "string", description: "Camera animation: slow zoom in, zoom out reveal, pan left to right, parallax movement, slow tilt upward" },
               transition: { type: "string", description: "Transition to next scene: fade, cross dissolve, cinematic zoom, slide transition, parallax reveal" },
