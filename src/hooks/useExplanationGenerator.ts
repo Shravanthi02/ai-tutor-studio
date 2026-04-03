@@ -36,7 +36,7 @@ async function generateAllImages(
   scenes: Scene[],
   onProgress: (current: number, total: number) => void
 ): Promise<Scene[]> {
-  const BATCH_SIZE = 3;
+  const BATCH_SIZE = 1;
   const results: Scene[] = scenes.map((s) => ({ ...s, imageUrls: [] }));
 
   // Flatten all visual prompts with scene/visual indices
@@ -78,7 +78,7 @@ async function generateAllImages(
     await Promise.all(promises);
 
     if (i + BATCH_SIZE < tasks.length) {
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 
