@@ -118,7 +118,7 @@ const MultiVisualLayer = ({
     if (!currentUrl) return;
     let cancelled = false;
     let attempt = 0;
-    const maxRetries = 3;
+    const maxRetries = 5;
 
     const tryLoad = () => {
       if (cancelled) return;
@@ -129,7 +129,7 @@ const MultiVisualLayer = ({
         if (cancelled) return;
         attempt++;
         if (attempt < maxRetries) {
-          setTimeout(tryLoad, 4000 * attempt);
+          setTimeout(tryLoad, 5000 * attempt);
         }
       };
       // Add cache-bust on retries to force fresh request
