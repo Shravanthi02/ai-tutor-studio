@@ -10,40 +10,10 @@ serve(async (req) => {
 
   try {
     const { prompt } = await req.json();
-    
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const GOOGLE_GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!prompt) throw new Error("Missing prompt");
 
-    let imageUrl: string | null = null;
-
-    // Try Lovable AI
-    if (!imageUrl && LOVABLE_API_KEY) {
-      try {
-        imageUrl = await generateWithLovableAI(LOVABLE_API_KEY, prompt);
-      } catch (e) {
-        console.warn("Lovable AI image failed:", e);
-      }
-    }
-
-    // Try Gemini
-    if (!imageUrl && GOOGLE_GEMINI_API_KEY) {
-      try {
-        imageUrl = await generateWithGemini(GOOGLE_GEMINI_API_KEY, prompt);
-      } catch (e) {
-        console.warn("Gemini image failed:", e);
-      }
-    }
-
-    // Fallback: Pollinations.ai (free, no API key needed)
-    if (!imageUrl) {
-      try {
-        imageUrl = await generateWithPollinations(prompt);
-      } catch (e) {
-        console.warn("Pollinations failed:", e);
-      }
-    }
-
-    if (!imageUrl) throw new Error("All image providers failed");
+    // Use Pollinations.ai (free, reliable, no API key needed)
+    const imageUrl = await generateWithPollinations(prompt);
 
     return new Response(JSON.stringify({ imageUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,94 +30,8 @@ async function generateWithPollinations(prompt: string): Promise<string> {
   const enhancedPrompt = `Create a clear, easy-to-understand educational visualization showing: ${prompt}. CRITICAL: Depict the EXACT subject described - not something related or symbolic. Make it crystal clear what concept is being shown. Style: educational diagram quality, clean simple composition, clear focal point, bright illumination, visible details, scientific accuracy, beginner-friendly illustration, no abstract art, no clutter, no text no labels`;
   const seed = Math.floor(Math.random() * 10000000);
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(enhancedPrompt)}?width=1024&height=576&nologo=true&seed=${seed}&model=flux-pro&enhance=true`;
-  
-  // Verify the URL works by making a HEAD request
-  const response = await fetch(url, { method: "GET", redirect: "follow" });
-  if (!response.ok) {
-    await response.text();
-    throw new Error(`Pollinations error: ${response.status}`);
-  }
-  
-  // Convert to base64 to avoid CORS issues in the client
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  const base64 = btoa(binary);
-  return `data:image/jpeg;base64,${base64}`;
-}
 
-async function generateWithLovableAI(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("Lovable AI image error:", response.status, errText);
-    throw new Error(`Lovable AI error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const message = data.choices?.[0]?.message;
-
-  if (Array.isArray(message?.images)) {
-    const img = message.images[0];
-    if (img?.image_url?.url) return img.image_url.url;
-  }
-
-  if (Array.isArray(message?.content)) {
-    const imagePart = message.content.find((p: any) => p.type === "image_url" || p.inline_data);
-    if (imagePart?.image_url?.url) return imagePart.image_url.url;
-    if (imagePart?.inline_data) return `data:${imagePart.inline_data.mime_type};base64,${imagePart.inline_data.data}`;
-  }
-
-  if (typeof message?.content === "string" && message.content.startsWith("data:")) {
-    return message.content;
-  }
-
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  const inlinePart = parts.find((p: any) => p.inlineData);
-  if (inlinePart?.inlineData) {
-    return `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
-  }
-
-  throw new Error("No image in response");
-}
-
-async function generateWithGemini(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("Gemini image error:", response.status, errText);
-    throw new Error(response.status === 429 ? "Rate limited" : "Image generation failed");
-  }
-
-  const data = await response.json();
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  const imagePart = parts.find((p: any) => p.inlineData);
-  if (!imagePart?.inlineData) throw new Error("No image generated");
-  return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+  // Return the URL directly - let the client load it
+  // This avoids base64 conversion which can cause memory/timeout issues
+  return url;
 }
