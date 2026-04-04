@@ -31,7 +31,6 @@ export interface HistoryItem {
 export type GenerationStatus = 
   | "idle" 
   | "generating-text" 
-  | "generating-images" 
   | "ready" 
   | "playing" 
   | "error";
