@@ -11,7 +11,6 @@ const Index = () => {
   const {
     status,
     explanation,
-    imageProgress,
     history,
     generate,
     loadFromHistory,
@@ -22,11 +21,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <HeroSection />
       <QuestionInput onSubmit={generate} status={status} />
-      <ProgressIndicator
-        status={status}
-        currentStep={imageProgress.current}
-        totalSteps={imageProgress.total}
-      />
+      <ProgressIndicator status={status} />
       {explanation && (status === "ready" || status === "playing") && (
         <>
           <ScenePlayer
