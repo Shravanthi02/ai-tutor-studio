@@ -17,7 +17,7 @@ const EXAMPLE_QUESTIONS = [
 
 const QuestionInput = ({ onSubmit, status }: QuestionInputProps) => {
   const [question, setQuestion] = useState("");
-  const isLoading = status === "generating-text" || status === "generating-images";
+  const isLoading = status === "generating-text";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

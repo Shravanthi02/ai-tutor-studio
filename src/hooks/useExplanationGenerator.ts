@@ -31,71 +31,9 @@ function saveHistory(items: HistoryItem[]) {
   }
 }
 
-// Generate images for all visual prompts across all scenes
-async function generateAllImages(
-  scenes: Scene[],
-  onProgress: (current: number, total: number) => void
-): Promise<Scene[]> {
-  const BATCH_SIZE = 1;
-  const results: Scene[] = scenes.map((s) => ({ ...s, imageUrls: [] }));
-
-  // Flatten all visual prompts with scene/visual indices
-  const tasks: { sceneIdx: number; visualIdx: number; prompt: string }[] = [];
-  scenes.forEach((scene, si) => {
-    scene.visuals.forEach((prompt, vi) => {
-      // Prepend scene narration context so the image directly matches what's being said
-      const contextualPrompt = `Scene context: "${scene.narration || scene.text}". Visualize exactly this: ${prompt}`;
-      tasks.push({ sceneIdx: si, visualIdx: vi, prompt: contextualPrompt });
-    });
-  });
-
-  const total = tasks.length;
-  let completed = 0;
-  onProgress(0, total);
-
-  for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
-    const batch = tasks.slice(i, i + BATCH_SIZE);
-    const promises = batch.map(async (task) => {
-      try {
-        const { data, error } = await supabase.functions.invoke("generate-scene-image", {
-          body: { prompt: task.prompt },
-        });
-        if (!error && data?.imageUrl) {
-          if (!results[task.sceneIdx].imageUrls) results[task.sceneIdx].imageUrls = [];
-          // Ensure array is properly sized
-          while (results[task.sceneIdx].imageUrls!.length <= task.visualIdx) {
-            results[task.sceneIdx].imageUrls!.push("");
-          }
-          results[task.sceneIdx].imageUrls![task.visualIdx] = data.imageUrl;
-        }
-      } catch {
-        // keep without image
-      }
-      completed++;
-      onProgress(completed, total);
-    });
-
-    await Promise.all(promises);
-
-    if (i + BATCH_SIZE < tasks.length) {
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-  }
-
-  // Set first imageUrl for backward compat
-  results.forEach((scene) => {
-    if (scene.imageUrls?.length) {
-      scene.imageUrl = scene.imageUrls[0];
-    }
-  });
-
-  return results;
-}
-
 export function useExplanationGenerator() {
   const [status, setStatus] = useState<GenerationStatus>("idle");
   const [explanation, setExplanation] = useState<Explanation | null>(null);
-  const [imageProgress, setImageProgress] = useState({ current: 0, total: 0 });
   const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
 
   const generate = useCallback(async (question: string) => {
@@ -115,18 +53,6 @@ export function useExplanationGenerator() {
 
       const expl = explData as Explanation;
       setExplanation(expl);
-      setStatus("generating-images");
-
-      const totalVisuals = expl.scenes.reduce((sum, s) => sum + (s.visuals?.length || 0), 0);
-      setImageProgress({ current: 0, total: totalVisuals });
-
-      const scenesWithImages = await generateAllImages(expl.scenes, (current, total) => {
-        setImageProgress({ current, total });
-      });
-
-      const finalExplanation = { ...expl, scenes: scenesWithImages };
-      setExplanation(finalExplanation);
-      setImageProgress({ current: totalVisuals, total: totalVisuals });
       setStatus("ready");
 
       const item: HistoryItem = {
@@ -135,7 +61,7 @@ export function useExplanationGenerator() {
         title: expl.title,
         fullAnswer: expl.fullAnswer || "",
         timestamp: Date.now(),
-        scenes: scenesWithImages,
+        scenes: expl.scenes,
       };
       const newHistory = [item, ...history.filter((h) => h.question !== question)];
       setHistory(newHistory);
@@ -162,7 +88,6 @@ export function useExplanationGenerator() {
   return {
     status,
     explanation,
-    imageProgress,
     history,
     generate,
     loadFromHistory,

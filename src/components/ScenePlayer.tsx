@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2 } from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, RotateCcw, Volume2, Lightbulb, Zap, Eye, Cog, Scale, Brain, Globe, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Scene } from "@/types/scene";
 
@@ -9,21 +9,18 @@ interface ScenePlayerProps {
   onComplete?: () => void;
 }
 
-const ANIMATION_MAP: Record<string, string> = {
-  "slow zoom in": "ken-burns-1",
-  "zoom out reveal": "ken-burns-4",
-  "pan left to right": "ken-burns-3",
-  "parallax movement": "ken-burns-2",
-  "slow tilt upward": "ken-burns-1",
-};
+const SCENE_ICONS = [Lightbulb, Zap, Eye, Cog, Scale, Brain, Globe, Star];
 
-const TRANSITION_MAP: Record<string, string> = {
-  "fade": "crossfade-in",
-  "cross dissolve": "crossfade-in",
-  "cinematic zoom": "cinematic-zoom-in",
-  "slide transition": "slide-in-scene",
-  "parallax reveal": "parallax-reveal",
-};
+const GRADIENT_PALETTES = [
+  "from-primary/20 via-secondary to-background",
+  "from-accent/15 via-muted to-card",
+  "from-primary/10 via-card to-secondary",
+  "from-muted via-primary/10 to-background",
+  "from-secondary via-accent/10 to-card",
+  "from-card via-primary/15 to-muted",
+  "from-primary/20 via-muted to-secondary",
+  "from-accent/10 via-secondary to-background",
+];
 
 // --- Browser TTS with chunking ---
 function speakReliably(text: string, onEnd: () => void): () => void {
@@ -91,76 +88,27 @@ const AnimatedSceneText = ({ text, isActive }: { text: string; isActive: boolean
   );
 };
 
-// --- Multi-visual crossfade layer ---
-const KENBURNS_STYLES: Record<string, React.CSSProperties> = {
-  "ken-burns-1": { animation: "kenBurns1 10s ease-in-out forwards" },
-  "ken-burns-2": { animation: "kenBurns2 10s ease-in-out forwards" },
-  "ken-burns-3": { animation: "kenBurns3 10s ease-in-out forwards" },
-  "ken-burns-4": { animation: "kenBurns4 10s ease-in-out forwards" },
-};
-
-const MultiVisualLayer = ({
-  imageUrls,
-  currentVisualIndex,
-  animationClass,
-  transitionClass,
-}: {
-  imageUrls: string[];
-  currentVisualIndex: number;
-  animationClass: string;
-  transitionClass: string;
-}) => {
-  const currentUrl = imageUrls[currentVisualIndex];
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setLoaded(false);
-    if (!currentUrl) return;
-    let cancelled = false;
-    let attempt = 0;
-    const maxRetries = 5;
-
-    const tryLoad = () => {
-      if (cancelled) return;
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => { if (!cancelled) setLoaded(true); };
-      img.onerror = () => {
-        if (cancelled) return;
-        attempt++;
-        if (attempt < maxRetries) {
-          setTimeout(tryLoad, 5000 * attempt);
-        }
-      };
-      // Add cache-bust on retries to force fresh request
-      img.src = attempt === 0 ? currentUrl : `${currentUrl}&_r=${attempt}`;
-    };
-    tryLoad();
-
-    return () => { cancelled = true; };
-  }, [currentUrl]);
-
-  if (!currentUrl) return <div className="w-full h-full shimmer" />;
-
-  const animationDuration = imageUrls.length > 1 ? "3.8s" : "10s";
-  const kbStyle = loaded
-    ? ({
-        ...(KENBURNS_STYLES[animationClass] || KENBURNS_STYLES["ken-burns-1"]),
-        animationDuration,
-        willChange: "transform",
-      } as React.CSSProperties)
-    : {};
+// --- Gradient visual background with icon ---
+const SceneVisualBackground = ({ sceneIndex, title }: { sceneIndex: number; title: string }) => {
+  const Icon = SCENE_ICONS[sceneIndex % SCENE_ICONS.length];
+  const gradient = GRADIENT_PALETTES[sceneIndex % GRADIENT_PALETTES.length];
 
   return (
-    <div className={`w-full h-full ${transitionClass}`}>
-      {!loaded && <div className="absolute inset-0 shimmer" />}
-      <img
-        key={`${currentVisualIndex}-${currentUrl}-${animationClass}`}
-        src={currentUrl}
-        alt=""
-        style={kbStyle}
-        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-      />
+    <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center relative overflow-hidden`}>
+      {/* Decorative circles */}
+      <div className="absolute top-10 right-10 w-32 h-32 rounded-full bg-primary/5 blur-2xl" />
+      <div className="absolute bottom-10 left-10 w-48 h-48 rounded-full bg-accent/5 blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-primary/3 blur-3xl animate-pulse" />
+      
+      {/* Central icon */}
+      <div className="relative z-10 flex flex-col items-center gap-4">
+        <div className="w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-primary/10">
+          <Icon className="w-10 h-10 text-primary" />
+        </div>
+        <span className="text-sm font-display text-muted-foreground/60 tracking-wider uppercase max-w-[200px] text-center">
+          {title}
+        </span>
+      </div>
     </div>
   );
 };
@@ -171,42 +119,15 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
   const [animKey, setAnimKey] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [textAnimActive, setTextAnimActive] = useState(true);
-  const [currentVisualIdx, setCurrentVisualIdx] = useState(0);
   const cancelSpeechRef = useRef<(() => void) | null>(null);
   const mountedRef = useRef(true);
-  const visualTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const scene = scenes[currentIndex];
-  const imageUrls = scene?.imageUrls?.filter(Boolean) || (scene?.imageUrl ? [scene.imageUrl] : []);
-  const animClass = ANIMATION_MAP[scene?.animation] || "ken-burns-1";
-  const transClass = TRANSITION_MAP[scene?.transition] || "crossfade-in";
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; stopAll(); };
   }, []);
-
-  // Cycle through visuals within a scene
-  useEffect(() => {
-    if (visualTimerRef.current) clearInterval(visualTimerRef.current);
-    setCurrentVisualIdx(0);
-
-    if (imageUrls.length > 1) {
-      visualTimerRef.current = setInterval(() => {
-        setCurrentVisualIdx((prev) => {
-          if (prev >= imageUrls.length - 1) {
-            if (visualTimerRef.current) clearInterval(visualTimerRef.current);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, 4000);
-    }
-
-    return () => {
-      if (visualTimerRef.current) clearInterval(visualTimerRef.current);
-    };
-  }, [currentIndex, imageUrls.length]);
 
   const stopAll = useCallback(() => {
     if (cancelSpeechRef.current) { cancelSpeechRef.current(); cancelSpeechRef.current = null; }
@@ -219,7 +140,6 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     setCurrentIndex(index);
     setAnimKey((k) => k + 1);
     setTextAnimActive(true);
-    setCurrentVisualIdx(0);
   }, [stopAll]);
 
   const playScene = useCallback(async (sceneData: Scene, sceneIndex: number) => {
@@ -249,7 +169,6 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
     return () => stopAll();
   }, [isPlaying, currentIndex]);
 
-
   // Auto-play on mount
   useEffect(() => {
     const t = setTimeout(() => setIsPlaying(true), 500);
@@ -274,15 +193,9 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
 
       {/* Video viewport */}
       <div className="relative rounded-2xl overflow-hidden bg-card border border-border aspect-video shadow-lg shadow-background/50">
-        {/* Multi-visual layer */}
-        <div className="absolute inset-0 overflow-hidden">
-          <MultiVisualLayer
-            key={`visual-${currentIndex}-${currentVisualIdx}-${animClass}`}
-            imageUrls={imageUrls}
-            currentVisualIndex={currentVisualIdx}
-            animationClass={animClass}
-            transitionClass={transClass}
-          />
+        {/* Gradient background */}
+        <div className="absolute inset-0">
+          <SceneVisualBackground sceneIndex={currentIndex} title={scene?.title || ""} />
         </div>
 
         {/* Gradient overlay */}
@@ -302,20 +215,6 @@ const ScenePlayer = ({ scenes, title, onComplete }: ScenePlayerProps) => {
           <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/30">
             <Volume2 className="w-3.5 h-3.5 text-primary animate-pulse" />
             <span className="text-xs text-primary font-medium">Speaking</span>
-          </div>
-        )}
-
-        {/* Visual indicator dots */}
-        {imageUrls.length > 1 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-            {imageUrls.map((_, i) => (
-              <div
-                key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                  i === currentVisualIdx ? "bg-primary scale-125" : "bg-foreground/30"
-                }`}
-              />
-            ))}
           </div>
         )}
 

@@ -2,29 +2,20 @@ import type { GenerationStatus } from "@/types/scene";
 
 interface ProgressIndicatorProps {
   status: GenerationStatus;
-  currentStep?: number;
-  totalSteps?: number;
 }
 
 const STATUS_LABELS: Record<GenerationStatus, string> = {
   idle: "",
   "generating-text": "Crafting explanation…",
-  "generating-images": "Generating illustrations…",
   ready: "Ready to play!",
   playing: "Now playing",
   error: "Something went wrong",
 };
 
-const ProgressIndicator = ({ status, currentStep, totalSteps }: ProgressIndicatorProps) => {
+const ProgressIndicator = ({ status }: ProgressIndicatorProps) => {
   if (status === "idle") return null;
 
-  const progress = status === "generating-text"
-    ? 20
-    : status === "generating-images" && totalSteps
-      ? 20 + (80 * (currentStep || 0)) / totalSteps
-      : status === "ready" || status === "playing"
-        ? 100
-        : 0;
+  const progress = status === "generating-text" ? 50 : status === "ready" || status === "playing" ? 100 : 0;
 
   return (
     <div className="max-w-3xl mx-auto px-4 mt-8">
@@ -32,11 +23,6 @@ const ProgressIndicator = ({ status, currentStep, totalSteps }: ProgressIndicato
         <span className="text-sm font-medium text-muted-foreground font-body">
           {STATUS_LABELS[status]}
         </span>
-        {totalSteps && status === "generating-images" && (
-          <span className="text-sm text-muted-foreground font-body">
-            {currentStep}/{totalSteps} visuals
-          </span>
-        )}
       </div>
       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div
